@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createExpense, updateExpense, deleteExpense } from '@/lib/queries/expenses'
 
-// GET - List expenses
-export async function GET(request: Request) {
+// GET - List expenses (for compatibility)
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const supabase = await createClient()
@@ -39,94 +39,69 @@ export async function GET(request: Request) {
 }
 
 // POST - Create expense
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const supabase = createAdminClient()
+    const supabase = await createClient()
     const body = await request.json()
 
-    const { data, error } = await supabase
-      .from('expenses')
-      .insert({
-        expense_date: body.expense_date,
-        category: body.category,
-        description: body.description,
-        vendor: body.vendor || null,
-        amount: body.amount,
-        notes: body.notes || null,
-      })
-      .select()
-      .single()
+    const expense = await createExpense(supabase, {
+      expense_date: body.expense_date,
+      category: body.category,
+      description: body.description,
+      amount: Number(body.amount),
+      vendor: body.vendor || null,
+      notes: body.notes || null,
+    })
 
-    if (error) throw error
-
-    return NextResponse.json({ expense: data })
+    return NextResponse.json(expense, { status: 201 })
   } catch (error) {
     console.error('Error creating expense:', error)
     return NextResponse.json(
-      { error: 'Failed to create expense' },
+      { error: error instanceof Error ? error.message : 'Failed to create expense' },
       { status: 500 }
     )
   }
 }
 
 // PUT - Update expense
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
-    const supabase = createAdminClient()
+    const supabase = await createClient()
     const body = await request.json()
+    const { expense_id, ...updates } = body
 
-    const { data, error } = await supabase
-      .from('expenses')
-      .update({
-        expense_date: body.expense_date,
-        category: body.category,
-        description: body.description,
-        vendor: body.vendor || null,
-        amount: body.amount,
-        notes: body.notes || null,
-      })
-      .eq('expense_id', body.expense_id)
-      .select()
-      .single()
+    if (!expense_id) {
+      return NextResponse.json({ error: 'expense_id is required' }, { status: 400 })
+    }
 
-    if (error) throw error
-
-    return NextResponse.json({ expense: data })
+    const expense = await updateExpense(supabase, expense_id, updates)
+    return NextResponse.json(expense)
   } catch (error) {
     console.error('Error updating expense:', error)
     return NextResponse.json(
-      { error: 'Failed to update expense' },
+      { error: error instanceof Error ? error.message : 'Failed to update expense' },
       { status: 500 }
     )
   }
 }
 
 // DELETE - Delete expense
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createAdminClient()
+    const supabase = await createClient()
     const { searchParams } = new URL(request.url)
-    const expenseId = searchParams.get('id')
+    const expense_id = searchParams.get('expense_id') || searchParams.get('id')
 
-    if (!expenseId) {
-      return NextResponse.json(
-        { error: 'Expense ID required' },
-        { status: 400 }
-      )
+    if (!expense_id) {
+      return NextResponse.json({ error: 'expense_id is required' }, { status: 400 })
     }
 
-    const { error } = await supabase
-      .from('expenses')
-      .delete()
-      .eq('expense_id', expenseId)
-
-    if (error) throw error
-
+    await deleteExpense(supabase, parseInt(expense_id))
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting expense:', error)
     return NextResponse.json(
-      { error: 'Failed to delete expense' },
+      { error: error instanceof Error ? error.message : 'Failed to delete expense' },
       { status: 500 }
     )
   }
