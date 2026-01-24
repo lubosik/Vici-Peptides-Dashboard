@@ -35,7 +35,14 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const sortBy = searchParams.sortBy || 'order_date'
   const sortOrder = searchParams.sortOrder || 'desc'
 
-  let ordersData, statuses
+  let ordersData: any = {
+    orders: [],
+    total: 0,
+    page: 1,
+    pageSize: 20,
+    totalPages: 0,
+  }
+  let statuses: string[] = []
   let hasError = false
   let errorMessage = ''
 

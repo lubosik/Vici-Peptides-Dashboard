@@ -33,7 +33,19 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const sortBy = searchParams.sortBy || 'product_name'
   const sortOrder = searchParams.sortOrder || 'asc'
 
-  let productsData, stockSummary
+  let productsData: any = {
+    products: [],
+    total: 0,
+    page: 1,
+    pageSize: 50,
+    totalPages: 0,
+  }
+  let stockSummary: any = {
+    inStock: 0,
+    lowStock: 0,
+    outOfStock: 0,
+    total: 0,
+  }
   let hasError = false
   let errorMessage = ''
 

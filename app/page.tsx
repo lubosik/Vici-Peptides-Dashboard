@@ -15,7 +15,25 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   
   // Fetch all dashboard data with error handling
-  let kpis, revenueData, topProducts, netProfitData
+  let kpis: any = {
+    totalRevenue: 0,
+    totalOrders: 0,
+    totalProfit: 0,
+    profitMargin: 0,
+    averageOrderValue: 0,
+    activeProducts: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    netProfitMargin: 0,
+    periodChange: {
+      revenue: { value: 0, percent: 0 },
+      orders: { value: 0, percent: 0 },
+      profit: { value: 0, percent: 0 },
+    },
+  }
+  let revenueData: any[] = []
+  let topProducts: any[] = []
+  let netProfitData: any[] = []
   let hasError = false
   
   try {

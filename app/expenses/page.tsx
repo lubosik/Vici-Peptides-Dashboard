@@ -37,7 +37,20 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const sortBy = searchParams.sortBy || 'expense_date'
   const sortOrder = searchParams.sortOrder || 'desc'
 
-  let expensesData, categories, expenseSummary
+  let expensesData: any = {
+    expenses: [],
+    total: 0,
+    page: 1,
+    pageSize: 20,
+    totalPages: 0,
+  }
+  let categories: string[] = []
+  let expenseSummary: any = {
+    total: 0,
+    thisMonth: 0,
+    average: 0,
+    expensesByCategory: [],
+  }
   let hasError = false
   let errorMessage = ''
 
