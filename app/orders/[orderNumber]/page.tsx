@@ -93,11 +93,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {serializedOrder.order_number}
+                    {order.order_number}
                   </h1>
                   <p className="text-muted-foreground mt-2">
-                    {serializedOrder.order_date 
-                      ? new Date(serializedOrder.order_date).toLocaleString()
+                    {order.order_date 
+                      ? new Date(order.order_date).toLocaleString()
                       : 'No date'}
                   </p>
                 </div>
@@ -109,14 +109,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   if (!newStatus) return
                   
                   const { updateOrderStatus } = await import('@/lib/queries/orders')
-                  await updateOrderStatus(supabase, serializedOrder.order_number, newStatus)
+                  await updateOrderStatus(supabase, order.order_number, newStatus)
                   
                   // Revalidate the page to show updated status
                   const { revalidatePath } = await import('next/cache')
-                  revalidatePath(`/orders/${encodeURIComponent(serializedOrder.order_number)}`)
+                  revalidatePath(`/orders/${encodeURIComponent(order.order_number)}`)
                   revalidatePath('/orders')
                 }}>
-                  <Select name="status" defaultValue={serializedOrder.order_status} className="w-48">
+                  <Select name="status" defaultValue={order.order_status} className="w-48">
                     <option value="pending">Pending</option>
                     <option value="processing">Processing</option>
                     <option value="completed">Completed</option>
@@ -181,35 +181,35 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 <CardContent className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal:</span>
-                    <span className="font-medium">{formatCurrency(Number(serializedOrder.order_subtotal) || 0)}</span>
+                    <span className="font-medium">{formatCurrency(Number(order.order_subtotal) || 0)}</span>
                   </div>
-                  {(Number(serializedOrder.shipping_charged) || 0) > 0 && (
+                  {(Number(order.shipping_charged) || 0) > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Shipping:</span>
-                      <span className="font-medium">{formatCurrency(Number(serializedOrder.shipping_charged) || 0)}</span>
+                      <span className="font-medium">{formatCurrency(Number(order.shipping_charged) || 0)}</span>
                     </div>
                   )}
-                  {(Number(serializedOrder.coupon_discount) || 0) > 0 && (
+                  {(Number(order.coupon_discount) || 0) > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Discount:</span>
                       <span className="font-medium text-red-600">
-                        -{formatCurrency(Number(serializedOrder.coupon_discount) || 0)}
+                        -{formatCurrency(Number(order.coupon_discount) || 0)}
                       </span>
                     </div>
                   )}
                   <div className="border-t pt-4 flex justify-between text-lg font-bold">
                     <span>Total:</span>
-                    <span>{formatCurrency(Number(serializedOrder.order_total) || 0)}</span>
+                    <span>{formatCurrency(Number(order.order_total) || 0)}</span>
                   </div>
                   <div className="border-t pt-4 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Cost:</span>
-                      <span className="font-medium">{formatCurrency(Number(serializedOrder.order_cost) || 0)}</span>
+                      <span className="font-medium">{formatCurrency(Number(order.order_cost) || 0)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Profit:</span>
                       <span className="font-medium text-green-600">
-                        {formatCurrency(Number(serializedOrder.order_profit) || 0)}
+                        {formatCurrency(Number(order.order_profit) || 0)}
                       </span>
                     </div>
                     <div className="flex justify-between">
