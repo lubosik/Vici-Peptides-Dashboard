@@ -134,7 +134,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                 <div className="text-2xl font-bold">
                   {formatCurrency(
                     expensesData.expenses
-                      .filter((e) => {
+                      .filter((e: any) => {
                         const expenseDate = new Date(e.expense_date)
                         const now = new Date()
                         return expenseDate.getMonth() === now.getMonth() &&
@@ -251,7 +251,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {expensesData.expenses.map((expense) => (
+                      {expensesData.expenses.map((expense: any) => (
                         <TableRow key={expense.expense_id}>
                           <TableCell>
                             {new Date(expense.expense_date).toLocaleDateString()}

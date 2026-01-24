@@ -27,7 +27,7 @@ export async function importProducts(): Promise<{ inserted: number; updated: num
   console.log('📦 Importing products...');
   
   const csvPath = getCSVPath('Vici_Order_Tracker_with_Expenses_v2 - Product_Inventory.csv');
-  const rows = readCSV(csvPath) as ProductRow[];
+  const rows = readCSV(csvPath) as any[];
   
   let inserted = 0;
   let updated = 0;

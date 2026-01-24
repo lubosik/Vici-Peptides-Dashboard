@@ -18,7 +18,7 @@ export async function importCoupons(): Promise<{ inserted: number; updated: numb
   console.log('🎫 Importing coupons...');
   
   const csvPath = getCSVPath('Vici_Order_Tracker_with_Expenses_v2 - Coupons.csv');
-  const rows = readCSV(csvPath) as CouponRow[];
+  const rows = readCSV(csvPath) as any[];
   
   let inserted = 0;
   let updated = 0;

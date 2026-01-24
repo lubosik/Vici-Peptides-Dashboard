@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       'Items Count',
     ]
 
-    const rows = orders.map((order) => [
+    const rows = orders.map((order: any) => [
       order.order_number,
       new Date(order.order_date).toISOString().split('T')[0],
       order.customer_name,
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
     const csv = [
       headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+      ...rows.map((row: any) => row.map((cell: any) => `"${cell}"`).join(',')),
     ].join('\n')
 
     return new NextResponse(csv, {

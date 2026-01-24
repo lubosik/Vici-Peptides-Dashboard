@@ -192,7 +192,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {ordersData.orders.map((order) => (
+                      {ordersData.orders.map((order: any) => (
                         <TableRow key={order.order_number}>
                           <TableCell className="font-medium">
                             <Link 

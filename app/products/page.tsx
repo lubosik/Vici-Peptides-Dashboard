@@ -245,7 +245,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {productsData.products.map((product) => (
+                    {productsData.products.map((product: any) => (
                       <TableRow key={product.product_id}>
                         <TableCell>
                           <div>

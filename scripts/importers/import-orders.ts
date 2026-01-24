@@ -68,7 +68,7 @@ export async function importOrders(): Promise<{ ordersInserted: number; ordersUp
   console.log('📦 Importing orders (with normalization)...');
   
   const csvPath = getCSVPath('Vici_Order_Tracker_with_Expenses_v2 - Orders.csv');
-  const rows = readCSV(csvPath) as OrderRow[];
+  const rows = readCSV(csvPath) as any[];
   
   // Group rows by Order_# to normalize
   const ordersMap = new Map<string, { order: OrderData; lines: OrderLineData[] }>();

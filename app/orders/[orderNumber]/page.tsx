@@ -249,7 +249,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                         </TableCell>
                       </TableRow>
                     ) : (
-                      lineItems.map((line) => {
+                      lineItems.map((line: any) => {
                         const lineMargin = line.line_total > 0 
                           ? (line.line_profit / line.line_total) * 100 
                           : 0

@@ -148,17 +148,17 @@ async function extractBrandTheme(): Promise<void> {
     // Process extracted data
     console.log('\n🔄 Processing extracted data...');
 
-    const primaryColor = colors.button?.fg || colors.link?.fg || colors.body?.fg || '#1a1a1a';
-    const backgroundColor = colors.body?.bg || colors.header?.bg || '#ffffff';
-    const accentColor = colors.button?.bg || colors.link?.fg || '#8b5cf6';
+    const primaryColor = (colors as any).button?.fg || (colors as any).link?.fg || (colors as any).body?.fg || '#1a1a1a';
+    const backgroundColor = (colors as any).body?.bg || (colors as any).header?.bg || '#ffffff';
+    const accentColor = (colors as any).button?.bg || (colors as any).link?.fg || '#8b5cf6';
 
     const tokens = {
       colors: {
         primary: normalizeColor(primaryColor),
-        secondary: normalizeColor(colors.body?.fg || '#4a4a4a'),
+        secondary: normalizeColor((colors as any).body?.fg || '#4a4a4a'),
         accent: normalizeColor(accentColor),
         background: normalizeColor(backgroundColor),
-        foreground: normalizeColor(colors.body?.fg || '#1a1a1a'),
+        foreground: normalizeColor((colors as any).body?.fg || '#1a1a1a'),
         muted: '#f5f5f5',
         mutedForeground: '#737373',
         border: '#e5e5e5',
@@ -167,14 +167,14 @@ async function extractBrandTheme(): Promise<void> {
       },
       typography: {
         fontFamily: {
-          sans: typography.body?.fontFamily 
-            ? [extractPrimaryFont(typography.body.fontFamily), 'sans-serif']
+          sans: (typography as any).body?.fontFamily 
+            ? [extractPrimaryFont((typography as any).body.fontFamily), 'sans-serif']
             : ['Inter', 'sans-serif'],
         },
         fontSize: {
           xs: '0.75rem',
           sm: '0.875rem',
-          base: typography.body?.fontSize || '1rem',
+          base: (typography as any).body?.fontSize || '1rem',
           lg: '1.125rem',
           xl: '1.25rem',
           '2xl': '1.5rem',
@@ -182,19 +182,19 @@ async function extractBrandTheme(): Promise<void> {
           '4xl': '2.25rem',
         },
         fontWeight: {
-          normal: typography.body?.fontWeight || '400',
+          normal: (typography as any).body?.fontWeight || '400',
           medium: '500',
           semibold: '600',
-          bold: typography.h1?.fontWeight || '700',
+          bold: (typography as any).h1?.fontWeight || '700',
         },
         headings: {
           h1: {
-            fontSize: typography.h1?.fontSize || '2.25rem',
-            fontWeight: typography.h1?.fontWeight || '700',
+            fontSize: (typography as any).h1?.fontSize || '2.25rem',
+            fontWeight: (typography as any).h1?.fontWeight || '700',
           },
           h2: {
-            fontSize: typography.h2?.fontSize || '1.875rem',
-            fontWeight: typography.h2?.fontWeight || '600',
+            fontSize: (typography as any).h2?.fontSize || '1.875rem',
+            fontWeight: (typography as any).h2?.fontWeight || '600',
           },
         },
       },
@@ -203,24 +203,24 @@ async function extractBrandTheme(): Promise<void> {
       },
       borderRadius: {
         none: '0',
-        sm: spacing.button?.borderRadius || '0.125rem',
+        sm: (spacing as any).button?.borderRadius || '0.125rem',
         base: '0.25rem',
         md: '0.375rem',
-        lg: spacing.card?.borderRadius || '0.5rem',
+        lg: (spacing as any).card?.borderRadius || '0.5rem',
         xl: '0.75rem',
         '2xl': '1rem',
         full: '9999px',
       },
       buttons: {
-        borderRadius: spacing.button?.borderRadius || '0.375rem',
-        padding: spacing.button?.padding || '0.5rem 1rem',
-        fontWeight: typography.button?.fontWeight || '600',
+        borderRadius: (spacing as any).button?.borderRadius || '0.375rem',
+        padding: (spacing as any).button?.padding || '0.5rem 1rem',
+        fontWeight: (typography as any).button?.fontWeight || '600',
       },
       cards: {
-        borderRadius: spacing.card?.borderRadius || '0.5rem',
+        borderRadius: (spacing as any).card?.borderRadius || '0.5rem',
         backgroundColor: normalizeColor(backgroundColor),
         border: '1px solid #e5e5e5',
-        padding: spacing.card?.padding || '1.5rem',
+        padding: (spacing as any).card?.padding || '1.5rem',
       },
     };
 

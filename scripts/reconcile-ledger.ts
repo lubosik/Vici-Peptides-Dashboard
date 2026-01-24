@@ -146,9 +146,9 @@ function calculateCSVMetrics(): {
   console.log('📊 Calculating metrics from CSV files...\n');
 
   // Load coupons for discount calculation
-  const couponRows = readCSV(getCSVPath('Vici_Order_Tracker_with_Expenses_v2 - Coupons.csv')) as CouponRow[];
+  const couponRows = readCSV(getCSVPath('Vici_Order_Tracker_with_Expenses_v2 - Coupons.csv')) as any[];
   const coupons = new Map<string, { type: string; value: number }>();
-  couponRows.forEach(row => {
+  couponRows.forEach((row: any) => {
     if (row.Coupon_Code) {
       coupons.set(row.Coupon_Code.trim(), {
         type: row.Discount_Type?.trim() || 'Fixed',
@@ -158,7 +158,7 @@ function calculateCSVMetrics(): {
   });
 
   // Load orders
-  const orderRows = readCSV(getCSVPath('Vici_Order_Tracker_with_Expenses_v2 - Orders.csv')) as OrderRow[];
+  const orderRows = readCSV(getCSVPath('Vici_Order_Tracker_with_Expenses_v2 - Orders.csv')) as any[];
 
   // Group by order number
   const ordersMap = new Map<string, {
@@ -270,7 +270,7 @@ function calculateCSVMetrics(): {
   const roiPercent = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
   // Load expenses
-  const expenseRows = readCSV(getCSVPath('Vici_Order_Tracker_with_Expenses_v2 - Expenses.csv')) as ExpenseRow[];
+  const expenseRows = readCSV(getCSVPath('Vici_Order_Tracker_with_Expenses_v2 - Expenses.csv')) as any[];
   const totalExpenses = expenseRows.reduce((sum, row) => sum + parseMoney(row.Amount), 0);
   const netProfit = totalProfit - totalExpenses;
 
@@ -347,10 +347,8 @@ async function queryDBMetrics(): Promise<{
     .from('orders')
     .select('order_number')
     .not('order_status', 'in', '("checkout-draft","cancelled","draft")');
-    .from('orders')
-    .select('order_number');
   if (ordersError) throw ordersError;
-  const uniqueOrders = new Set((ordersData || []).map(o => o.order_number));
+  const uniqueOrders = new Set((ordersData || []).map((o: any) => o.order_number));
   const totalOrders = uniqueOrders.size;
 
   // Total Units Sold (sum from order_lines)

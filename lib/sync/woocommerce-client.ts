@@ -226,7 +226,7 @@ export class WooCommerceClient {
    * Fetch all pages of a resource (handles pagination automatically)
    */
   async fetchAllPages<T>(
-    fetchFn: (page: number) => Promise<{ [key: string]: T[]; totalPages: number }>,
+    fetchFn: (page: number) => Promise<{ [key: string]: T[] | number; totalPages: number }>,
     resourceName: string
   ): Promise<T[]> {
     const allItems: T[] = []

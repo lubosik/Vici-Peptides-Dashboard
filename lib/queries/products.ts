@@ -214,7 +214,8 @@ export async function getProductById(
       our_cost,
       retail_price,
       unit_margin,
-      margin_percent
+      margin_percent,
+      woo_product_id
     `)
     .eq('product_id', productId)
     .single()
@@ -270,10 +271,11 @@ export async function getProductById(
     retail_price: product.retail_price ? Number(product.retail_price) : null,
     unit_margin: product.unit_margin ? Number(product.unit_margin) : null,
     margin_percent: product.margin_percent ? Number(product.margin_percent) : null,
+    woo_product_id: product.woo_product_id ? Number(product.woo_product_id) : null,
     total_revenue: sales.total_revenue,
     total_cost: sales.total_cost,
     total_profit: sales.total_profit,
-    roi_percent,
+    roi_percent: roiPercent,
   }
 }
 

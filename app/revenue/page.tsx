@@ -38,8 +38,14 @@ export default async function RevenuePage({ searchParams }: RevenuePageProps) {
   const sortBy = searchParams.sortBy || 'order_date'
   const sortOrder = searchParams.sortOrder || 'desc'
 
-  let ordersData
-  let allOrders
+  let ordersData: any = {
+    orders: [],
+    total: 0,
+    page: 1,
+    pageSize: 50,
+    totalPages: 0,
+  }
+  let allOrders: any[] = []
   let hasError = false
   let errorMessage = ''
 
@@ -75,15 +81,15 @@ export default async function RevenuePage({ searchParams }: RevenuePageProps) {
   // Apply additional filters
   let filteredOrders = ordersData.orders
   if (searchParams.paymentMethod) {
-    filteredOrders = filteredOrders.filter(o => o.payment_method === searchParams.paymentMethod)
+    filteredOrders = filteredOrders.filter((o: any) => o.payment_method === searchParams.paymentMethod)
   }
   if (searchParams.couponCode) {
-    filteredOrders = filteredOrders.filter(o => o.coupon_code === searchParams.couponCode)
+    filteredOrders = filteredOrders.filter((o: any) => o.coupon_code === searchParams.couponCode)
   }
   if (searchParams.freeShipping === 'yes') {
-    filteredOrders = filteredOrders.filter(o => o.free_shipping === true)
+    filteredOrders = filteredOrders.filter((o: any) => o.free_shipping === true)
   } else if (searchParams.freeShipping === 'no') {
-    filteredOrders = filteredOrders.filter(o => o.free_shipping === false)
+    filteredOrders = filteredOrders.filter((o: any) => o.free_shipping === false)
   }
 
   const totalRevenue = filteredOrders.reduce((sum: number, o: any) => sum + o.order_total, 0)
@@ -272,7 +278,7 @@ export default async function RevenuePage({ searchParams }: RevenuePageProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOrders.map((order) => {
+                    {filteredOrders.map((order: any) => {
                       const margin = order.order_total > 0 
                         ? (order.order_profit / order.order_total) * 100 
                         : 0

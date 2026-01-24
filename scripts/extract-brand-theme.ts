@@ -106,7 +106,7 @@ async function extractBrandTheme(): Promise<void> {
     // Extract Typography
     console.log('📝 Extracting typography...');
     const typography = await page.evaluate(() => {
-      const getStyles = (selector) => {
+      const getStyles = (selector: any) => {
         try {
           const el = document.querySelector(selector);
           if (!el) return null;
@@ -139,9 +139,9 @@ async function extractBrandTheme(): Promise<void> {
     // Extract Color Palette
     console.log('🎨 Extracting color palette...');
     const colorPalette = await page.evaluate(() => {
-      function extractColors(selector) {
+      function extractColors(selector: any) {
         const elements = Array.from(document.querySelectorAll(selector));
-        const colors = {};
+        const colors: Record<string, number> = {};
         
         elements.forEach((el) => {
           const styles = window.getComputedStyle(el);

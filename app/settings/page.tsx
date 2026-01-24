@@ -15,7 +15,7 @@ export default async function SettingsPage() {
   let connectionStatus = 'unknown'
   let connectionError: string | null = null
   let lastIngestion = null
-  let ingestionEvents = []
+  let ingestionEvents: any[] = []
   let ordersCount = 0
   let orderLinesCount = 0
   let productsCount = 0

@@ -22,7 +22,7 @@ export async function importTieredPricing(): Promise<{ inserted: number; updated
   console.log('💰 Importing tiered pricing...');
   
   const csvPath = getCSVPath('Vici_Order_Tracker_with_Expenses_v2 - Tiered_Pricing.csv');
-  const rows = readCSV(csvPath) as TieredPricingRow[];
+  const rows = readCSV(csvPath) as any[];
   
   let inserted = 0;
   let updated = 0;
