@@ -86,8 +86,8 @@ export default async function RevenuePage({ searchParams }: RevenuePageProps) {
     filteredOrders = filteredOrders.filter(o => o.free_shipping === false)
   }
 
-  const totalRevenue = filteredOrders.reduce((sum, o) => sum + o.order_total, 0)
-  const totalProfit = filteredOrders.reduce((sum, o) => sum + o.order_profit, 0)
+  const totalRevenue = filteredOrders.reduce((sum: number, o: any) => sum + o.order_total, 0)
+  const totalProfit = filteredOrders.reduce((sum: number, o: any) => sum + o.order_profit, 0)
 
   return (
     <div className="flex min-h-screen bg-background">

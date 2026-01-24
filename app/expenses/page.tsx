@@ -81,7 +81,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
     }
   }
 
-  const totalAmount = expensesData.expenses.reduce((sum, e) => sum + e.amount, 0)
+  const totalAmount = expensesData.expenses.reduce((sum: number, e: any) => sum + e.amount, 0)
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -140,7 +140,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                         return expenseDate.getMonth() === now.getMonth() &&
                                expenseDate.getFullYear() === now.getFullYear()
                       })
-                      .reduce((sum, e) => sum + e.amount, 0)
+                      .reduce((sum: number, e: any) => sum + e.amount, 0)
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
