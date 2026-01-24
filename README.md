@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Vici Peptides Dashboard
 
 A production-grade, live-updating, ledger-accurate analytics dashboard for Vici Peptides. This dashboard ingests WooCommerce data into Supabase Postgres, normalizes it into an order ledger (parent orders + child order_lines), calculates every metric with explicit deterministic formulas, and presents results in a fast, clean UI.
@@ -11,6 +10,7 @@ A production-grade, live-updating, ledger-accurate analytics dashboard for Vici 
 - 📱 **Responsive Design**: Mobile-optimized with hamburger menu navigation
 - 🎨 **On-Brand UI**: Design system extracted from vicipeptides.com
 - 🔄 **Idempotent Sync**: Prevents duplicate data with unique constraints and upsert logic
+- 🚫 **Smart Filtering**: Excludes draft/cancelled orders and placeholder products from calculations
 
 ## Tech Stack
 
@@ -105,21 +105,24 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Order Management
 - View all orders with filtering and pagination
-- Order detail pages with line items
+- Order detail pages with line items (automatically generated for every order)
 - Status updates and order tracking
 - Export to CSV
+- Excludes draft/cancelled orders from revenue calculations
 
 ### Product Inventory
 - Product listing with sales metrics
 - Stock status tracking
 - Low stock alerts
 - Product detail views
+- Placeholder products automatically filtered out
 
 ### Analytics
 - Revenue over time charts
 - Profit analysis
 - Top products by revenue/units
 - Expense tracking and categorization
+- All metrics exclude draft/cancelled orders
 
 ### WooCommerce Sync
 - Manual sync trigger from Settings
@@ -127,16 +130,24 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - Idempotent data ingestion
 - Sync state tracking
 
+## Mobile Responsive Design
+
+- **Desktop (≥1024px)**: Traditional sidebar navigation
+- **Mobile (<1024px)**: Hamburger menu with slide-out drawer
+- All pages optimized for mobile with responsive typography and spacing
+
 ## Deployment
 
 ### Vercel
 
-1. Push code to GitHub
-2. Import project in Vercel
+1. Push code to GitHub (already done!)
+2. Import project in Vercel: https://vercel.com
 3. Add environment variables in Vercel dashboard
 4. Deploy
 
 The dashboard will automatically deploy on every push to main.
+
+See `DEPLOYMENT.md` for detailed deployment instructions.
 
 ## Environment Variables
 
@@ -158,7 +169,3 @@ ISC
 ## Support
 
 For issues and questions, please open an issue on GitHub.
-=======
-# Vici-Peptides-Dashboard
-Vici Peptides Dashboard
->>>>>>> 67b0ac008eaf16c7b3d4692fe65b14128e9dd85f
