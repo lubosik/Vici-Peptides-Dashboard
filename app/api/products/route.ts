@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const WOOCOMMERCE_STORE_URL = process.env.WOOCOMMERCE_STORE_URL
-const WOOCOMMERCE_CONSUMER_KEY = process.env.WOOCOMMERCE_CONSUMER_KEY
-const WOOCOMMERCE_CONSUMER_SECRET = process.env.WOOCOMMERCE_CONSUMER_SECRET
+// Helper to get WooCommerce credentials (checked at runtime, not build time)
+function getWooCommerceCredentials() {
+  const WOOCOMMERCE_STORE_URL = process.env.WOOCOMMERCE_STORE_URL
+  const WOOCOMMERCE_CONSUMER_KEY = process.env.WOOCOMMERCE_CONSUMER_KEY
+  const WOOCOMMERCE_CONSUMER_SECRET = process.env.WOOCOMMERCE_CONSUMER_SECRET
 
-if (!WOOCOMMERCE_STORE_URL || !WOOCOMMERCE_CONSUMER_KEY || !WOOCOMMERCE_CONSUMER_SECRET) {
-  throw new Error('Missing WooCommerce credentials')
+  if (!WOOCOMMERCE_STORE_URL || !WOOCOMMERCE_CONSUMER_KEY || !WOOCOMMERCE_CONSUMER_SECRET) {
+    throw new Error('Missing WooCommerce credentials')
+  }
+
+  return { WOOCOMMERCE_STORE_URL, WOOCOMMERCE_CONSUMER_KEY, WOOCOMMERCE_CONSUMER_SECRET }
 }
 
 // Helper to make WooCommerce API requests
 async function wooCommerceRequest(method: string, endpoint: string, body?: any) {
+  const { WOOCOMMERCE_STORE_URL, WOOCOMMERCE_CONSUMER_KEY, WOOCOMMERCE_CONSUMER_SECRET } = getWooCommerceCredentials()
   const url = `${WOOCOMMERCE_STORE_URL}/wp-json/wc/v3${endpoint}`
   const auth = Buffer.from(`${WOOCOMMERCE_CONSUMER_KEY}:${WOOCOMMERCE_CONSUMER_SECRET}`).toString('base64')
 
