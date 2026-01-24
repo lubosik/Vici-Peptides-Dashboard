@@ -3,6 +3,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Home } from 'lucide-react'
 
+// Force dynamic rendering to prevent build-time errors
+export const dynamic = 'force-dynamic'
+
 export default function NotFound() {
   return (
     <div className="flex h-screen items-center justify-center bg-background p-8">

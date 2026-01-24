@@ -8,6 +8,9 @@ import { OnboardingToggle } from '@/components/settings/onboarding-toggle'
 import { ThemeToggle } from '@/components/theme/theme-toggle'
 import { WooCommerceSync } from '@/components/settings/woocommerce-sync'
 
+// Force dynamic rendering to prevent build-time errors when env vars aren't available
+export const dynamic = 'force-dynamic'
+
 export default async function SettingsPage() {
   const supabase = await createClient()
 

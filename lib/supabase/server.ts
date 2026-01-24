@@ -7,7 +7,43 @@ export async function createClient() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    // Provide helpful error message with debugging info
+    // During build time (especially on Vercel), env vars might not be available
+    // Check if we're in a build context by checking for Next.js build indicators
+    const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+                       process.env.VERCEL === '1' && !supabaseUrl
+    
+    if (isBuildTime) {
+      // During build, return a mock client that won't be used
+      // Pages marked as dynamic will handle this at runtime
+      // This prevents build-time errors when env vars aren't available
+      const { createServerClient } = await import('@supabase/ssr')
+      const cookieStore = await import('next/headers').then(m => m.cookies())
+      
+      // Use placeholder values - these won't be used during build
+      // The actual client will be created at runtime when env vars are available
+      return createServerClient(
+        'https://placeholder.supabase.co',
+        'placeholder-key',
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll()
+            },
+            setAll(cookiesToSet: any[]) {
+              try {
+                cookiesToSet.forEach(({ name, value, options }) =>
+                  cookieStore.set(name, value, options)
+                )
+              } catch {
+                // Ignore during build
+              }
+            },
+          },
+        }
+      )
+    }
+    
+    // Provide helpful error message with debugging info (runtime only)
     const envInfo = {
       hasUrl: !!supabaseUrl,
       hasKey: !!supabaseAnonKey,
