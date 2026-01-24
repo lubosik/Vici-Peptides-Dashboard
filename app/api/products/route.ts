@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+// Force dynamic rendering for API routes
+export const dynamic = 'force-dynamic'
+
 // Helper to get WooCommerce credentials (checked at runtime, not build time)
 function getWooCommerceCredentials() {
   const WOOCOMMERCE_STORE_URL = process.env.WOOCOMMERCE_STORE_URL
@@ -109,12 +112,20 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // Check if request was aborted
+    if (request.signal?.aborted) {
+      return NextResponse.json({ error: 'Request aborted' }, { status: 499 })
+    }
+
     const { searchParams } = new URL(request.url)
     const product_id = searchParams.get('product_id')
     const woo_product_id = searchParams.get('woo_product_id')
 
     if (!product_id && !woo_product_id) {
-      return NextResponse.json({ error: 'product_id or woo_product_id required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'product_id or woo_product_id required' },
+        { status: 400 }
+      )
     }
 
     const supabase = await createClient()
@@ -124,11 +135,16 @@ export async function DELETE(request: NextRequest) {
     if (woo_product_id) {
       wooId = parseInt(woo_product_id)
     } else if (product_id) {
-      const { data: product } = await supabase
+      const { data: product, error: fetchError } = await supabase
         .from('products')
         .select('woo_product_id')
         .eq('product_id', parseInt(product_id))
         .single()
+      
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError
+      }
+      
       wooId = product?.woo_product_id || null
     }
 
@@ -137,6 +153,7 @@ export async function DELETE(request: NextRequest) {
       try {
         await wooCommerceRequest('DELETE', `/products/${wooId}?force=true`)
       } catch (error) {
+        // Log but don't fail - product may already be deleted in WooCommerce
         console.warn('Failed to delete from WooCommerce (may already be deleted):', error)
       }
     }
@@ -146,16 +163,52 @@ export async function DELETE(request: NextRequest) {
       ? supabase.from('products').delete().eq('product_id', parseInt(product_id))
       : supabase.from('products').delete().eq('woo_product_id', wooId!)
 
-    const { error } = await deleteQuery
+    const { error: deleteError, data } = await deleteQuery
 
-    if (error) throw error
+    if (deleteError) {
+      throw deleteError
+    }
 
-    return NextResponse.json({ success: true })
+    // Return success response with proper headers
+    return NextResponse.json(
+      { 
+        success: true,
+        message: 'Product deleted successfully',
+        deleted: {
+          product_id: product_id ? parseInt(product_id) : null,
+          woo_product_id: wooId,
+        }
+      },
+      { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, must-revalidate',
+        }
+      }
+    )
   } catch (error) {
     console.error('Error deleting product:', error)
+    
+    // Check if error is due to request being aborted
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json(
+        { error: 'Request was cancelled' },
+        { status: 499 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete product' },
-      { status: 500 }
+      { 
+        error: error instanceof Error ? error.message : 'Failed to delete product',
+        success: false
+      },
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
     )
   }
 }
