@@ -75,7 +75,7 @@ export default async function SettingsPage() {
       <main className="flex-1 overflow-y-auto lg:ml-0">
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Settings</h1>
             <p className="text-muted-foreground mt-2">
               System configuration and health monitoring
             </p>

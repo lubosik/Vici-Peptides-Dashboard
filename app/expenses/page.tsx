@@ -75,7 +75,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Expenses</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Expenses</h1>
               <p className="text-muted-foreground mt-2">
                 Track and manage business expenses
               </p>

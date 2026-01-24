@@ -96,7 +96,7 @@ export default async function RevenuePage({ searchParams }: RevenuePageProps) {
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Revenue</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Revenue</h1>
               <p className="text-muted-foreground mt-2">
                 Transactional revenue ledger and time-series explorer
               </p>

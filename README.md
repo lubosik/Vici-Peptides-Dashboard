@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Vici Peptides Dashboard
 
 A production-grade, live-updating, ledger-accurate analytics dashboard for Vici Peptides. This dashboard ingests WooCommerce data into Supabase Postgres, normalizes it into an order ledger (parent orders + child order_lines), calculates every metric with explicit deterministic formulas, and presents results in a fast, clean UI.
@@ -157,3 +158,7 @@ ISC
 ## Support
 
 For issues and questions, please open an issue on GitHub.
+=======
+# Vici-Peptides-Dashboard
+Vici Peptides Dashboard
+>>>>>>> 67b0ac008eaf16c7b3d4692fe65b14128e9dd85f
