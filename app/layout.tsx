@@ -7,8 +7,8 @@ import { ThemeProvider } from '@/components/theme/theme-provider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Vici Peptides Dashboard',
-  description: 'Analytics dashboard for Vici Peptides',
+  title: 'NeonMetrics Dashboard',
+  description: 'Analytics dashboard demo - NeonMetrics',
 }
 
 export default function RootLayout({

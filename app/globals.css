@@ -4,48 +4,34 @@
 
 @layer base {
   :root {
-    --background: 246 241 235; /* #f6f1eb */
-    --foreground: 51 51 51; /* #333333 */
-    --card: 246 241 235;
-    --card-foreground: 51 51 51;
-    --popover: 246 241 235;
-    --popover-foreground: 51 51 51;
-    --primary: 51 51 51; /* #333333 */
-    --primary-foreground: 246 241 235; /* #f6f1eb */
-    --secondary: 51 51 51; /* #333333 */
-    --secondary-foreground: 246 241 235; /* #f6f1eb */
-    --muted: 245 245 245; /* #f5f5f5 */
-    --muted-foreground: 115 115 115; /* #737373 */
-    --accent: 0 0 0; /* #000000 */
-    --accent-foreground: 246 241 235; /* #f6f1eb */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 229 229 229; /* #e5e5e5 */
-    --input: 255 255 255; /* #ffffff */
-    --ring: 0 0 0; /* #000000 */
-    --radius: 0.375rem;
-  }
-
-  .dark {
-    --background: 51 51 51; /* #333333 */
-    --foreground: 246 241 235; /* #f6f1eb */
-    --card: 51 51 51;
-    --card-foreground: 246 241 235;
-    --popover: 51 51 51;
-    --popover-foreground: 246 241 235;
-    --primary: 246 241 235; /* #f6f1eb */
-    --primary-foreground: 51 51 51; /* #333333 */
-    --secondary: 51 51 51; /* #333333 */
-    --secondary-foreground: 246 241 235; /* #f6f1eb */
-    --muted: 115 115 115; /* #737373 */
-    --muted-foreground: 245 245 245; /* #f5f5f5 */
-    --accent: 0 0 0; /* #000000 */
-    --accent-foreground: 246 241 235; /* #f6f1eb */
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 229 229 229; /* #e5e5e5 */
-    --input: 51 51 51; /* #333333 */
-    --ring: 0 0 0; /* #000000 */
+    /* Neon Purple Theme - Deep purple backgrounds */
+    --background: 20 15 35; /* Deep purple gradient start */
+    --foreground: 240 240 255; /* Light text */
+    --card: 30 25 50; /* Dark purple card background */
+    --card-foreground: 240 240 255;
+    --popover: 30 25 50;
+    --popover-foreground: 240 240 255;
+    --primary: 147 197 253; /* Neon cyan */
+    --primary-foreground: 20 15 35;
+    --secondary: 168 85 247; /* Neon purple */
+    --secondary-foreground: 240 240 255;
+    --muted: 50 45 70; /* Muted purple */
+    --muted-foreground: 180 180 200;
+    --accent: 236 72 153; /* Neon pink */
+    --accent-foreground: 240 240 255;
+    --destructive: 239 68 68; /* Red */
+    --destructive-foreground: 240 240 255;
+    --border: 80 70 120; /* Subtle purple border */
+    --input: 40 35 60;
+    --ring: 147 197 253; /* Neon cyan ring */
+    --radius: 0.5rem;
+    
+    /* Neon gradient colors */
+    --neon-cyan: 147 197 253;
+    --neon-pink: 236 72 153;
+    --neon-green: 34 197 94;
+    --neon-orange: 249 115 22;
+    --neon-yellow: 234 179 8;
   }
 }
 
@@ -56,5 +42,49 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background: linear-gradient(to bottom, rgb(20, 15, 35), rgb(15, 10, 25));
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  /* Neon glow effects */
+  .neon-glow {
+    box-shadow: 0 0 10px rgba(147, 197, 253, 0.3),
+                0 0 20px rgba(147, 197, 253, 0.2),
+                inset 0 0 20px rgba(147, 197, 253, 0.1);
+  }
+  
+  .neon-glow-pink {
+    box-shadow: 0 0 10px rgba(236, 72, 153, 0.3),
+                0 0 20px rgba(236, 72, 153, 0.2),
+                inset 0 0 20px rgba(236, 72, 153, 0.1);
+  }
+  
+  .neon-glow-green {
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.3),
+                0 0 20px rgba(34, 197, 94, 0.2),
+                inset 0 0 20px rgba(34, 197, 94, 0.1);
+  }
+  
+  /* Glassy card effect */
+  .glass-card {
+    background: rgba(30, 25, 50, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(147, 197, 253, 0.2);
+    box-shadow: 0 0 20px rgba(147, 197, 253, 0.1),
+                inset 0 0 20px rgba(147, 197, 253, 0.05);
+  }
+  
+  /* Neon text glow */
+  .neon-text {
+    text-shadow: 0 0 10px rgba(147, 197, 253, 0.8),
+                 0 0 20px rgba(147, 197, 253, 0.6),
+                 0 0 30px rgba(147, 197, 253, 0.4);
+  }
+  
+  .neon-text-pink {
+    text-shadow: 0 0 10px rgba(236, 72, 153, 0.8),
+                 0 0 20px rgba(236, 72, 153, 0.6);
   }
 }

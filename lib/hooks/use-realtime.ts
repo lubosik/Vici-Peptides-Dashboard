@@ -74,6 +74,11 @@ export function useRealtime({
           table: table,
         },
         (payload) => {
+          // Check if we're cleaning up - ignore messages during cleanup
+          if (isCleaningUpRef.current) {
+            return
+          }
+
           // Use ref to get latest callbacks without re-subscribing
           const { onInsert, onUpdate, onDelete } = callbacksRef.current
 
@@ -127,12 +132,17 @@ export function useRealtime({
     return () => {
       if (channelRef.current) {
         isCleaningUpRef.current = true
-        // Unsubscribe first to prevent CLOSED events from being logged
-        channelRef.current.unsubscribe()
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-        setIsConnected(false)
-        isCleaningUpRef.current = false
+        // Wait a bit to ensure any pending messages are processed
+        setTimeout(() => {
+          // Unsubscribe first to prevent CLOSED events from being logged
+          if (channelRef.current) {
+            channelRef.current.unsubscribe()
+            supabase.removeChannel(channelRef.current)
+            channelRef.current = null
+            setIsConnected(false)
+          }
+          isCleaningUpRef.current = false
+        }, 100)
       }
     }
   }, [table, enabled, supabase]) // Only depend on table and enabled, not callbacks

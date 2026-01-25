@@ -112,6 +112,22 @@ export class WooCommerceSync {
         ? await this.getLastSyncTimestamp('orders')
         : undefined
 
+      // For full mode, get existing order IDs to skip already synced orders
+      let existingOrderIds = new Set<number>()
+      if (mode === 'full') {
+        const { data: existingOrders } = await this.supabase
+          .from('orders')
+          .select('woo_order_id')
+          .not('woo_order_id', 'is', null)
+        
+        existingOrderIds = new Set(
+          (existingOrders || [])
+            .map(o => Number(o.woo_order_id))
+            .filter(id => !isNaN(id) && id > 0)
+        )
+        console.log(`📊 Found ${existingOrderIds.size} existing orders in database`)
+      }
+
       // Fetch all orders
       const allOrders = await this.wooClient.fetchAllPages(
         async (page) => {
@@ -125,13 +141,18 @@ export class WooCommerceSync {
         'orders'
       )
 
-      console.log(`📦 Fetched ${allOrders.length} orders from WooCommerce`)
+      // Filter out orders that already exist in full mode
+      const ordersToSync = mode === 'full'
+        ? allOrders.filter(order => !existingOrderIds.has(order.id))
+        : allOrders
+
+      console.log(`📦 Fetched ${allOrders.length} orders from WooCommerce, ${ordersToSync.length} to sync (${allOrders.length - ordersToSync.length} already exist)`)
 
       // Process orders sequentially to avoid overwhelming the database
-      for (let i = 0; i < allOrders.length; i++) {
-        const wooOrder = allOrders[i]
+      for (let i = 0; i < ordersToSync.length; i++) {
+        const wooOrder = ordersToSync[i]
         if (i % 10 === 0) {
-          console.log(`Processing order ${i + 1}/${allOrders.length}...`)
+          console.log(`Processing order ${i + 1}/${ordersToSync.length}...`)
         }
         
         try {
@@ -276,12 +297,52 @@ export class WooCommerceSync {
                   console.log(`   First item:`, JSON.stringify(validatedLineItems[0], null, 2))
                 }
 
-                const { error: lineError, data: insertedLines } = await this.supabase
-                  .from('order_lines')
-                  .upsert(validatedLineItems, {
-                    onConflict: 'order_number,product_id,our_cost_per_unit,customer_paid_per_unit',
-                  })
-                  .select()
+                // Map to include WooCommerce fields if available
+                const lineItemsWithWooFields = validatedLineItems.map((item, idx) => {
+                  const wooItem = lineItems[idx]
+                  const wooOrderItem = wooOrder.line_items?.[idx]
+                  return {
+                    ...item,
+                    // Add WooCommerce fields if available
+                    order_id: wooOrder.id || null,
+                    id: wooItem.woo_line_item_id || wooOrderItem?.id || null,
+                    name: wooOrderItem?.name || null,
+                    sku: wooOrderItem?.sku || null,
+                    price: wooOrderItem?.price ? String(wooOrderItem.price) : null,
+                    subtotal: wooOrderItem?.subtotal ? String(wooOrderItem.subtotal) : null,
+                    total: wooOrderItem?.total ? String(wooOrderItem.total) : null,
+                    raw_json: wooOrderItem || null,
+                  }
+                })
+
+                // Try upsert with WooCommerce constraint first, fallback to original constraint
+                let lineError = null
+                let insertedLines = null
+                
+                // Check if we have order_id and id (WooCommerce fields)
+                const hasWooFields = lineItemsWithWooFields.some(item => item.order_id && item.id)
+                
+                if (hasWooFields) {
+                  // Use WooCommerce unique constraint
+                  const result = await this.supabase
+                    .from('order_lines')
+                    .upsert(lineItemsWithWooFields, {
+                      onConflict: 'order_id,id',
+                    })
+                    .select()
+                  lineError = result.error
+                  insertedLines = result.data
+                } else {
+                  // Fallback to original constraint
+                  const result = await this.supabase
+                    .from('order_lines')
+                    .upsert(validatedLineItems, {
+                      onConflict: 'order_number,product_id,our_cost_per_unit,customer_paid_per_unit',
+                    })
+                    .select()
+                  lineError = result.error
+                  insertedLines = result.data
+                }
 
                 if (lineError) {
                   console.error(`❌ Error upserting line items for order ${order.order_number}:`, lineError)
@@ -367,9 +428,30 @@ export class WooCommerceSync {
         'products'
       )
 
-      console.log(`Fetched ${allProducts.length} products from WooCommerce`)
+      // For full mode, get existing product IDs to skip already synced products
+      let existingProductIds = new Set<number>()
+      if (mode === 'full') {
+        const { data: existingProducts } = await this.supabase
+          .from('products')
+          .select('woo_product_id')
+          .not('woo_product_id', 'is', null)
+        
+        existingProductIds = new Set(
+          (existingProducts || [])
+            .map(p => Number(p.woo_product_id))
+            .filter(id => !isNaN(id) && id > 0)
+        )
+        console.log(`📊 Found ${existingProductIds.size} existing products in database`)
+      }
 
-      for (const wooProduct of allProducts) {
+      // Filter out products that already exist in full mode
+      const productsToSync = mode === 'full'
+        ? allProducts.filter(product => !existingProductIds.has(product.id))
+        : allProducts
+
+      console.log(`📦 Fetched ${allProducts.length} products from WooCommerce, ${productsToSync.length} to sync (${allProducts.length - productsToSync.length} already exist)`)
+
+      for (const wooProduct of productsToSync) {
         try {
           const product = normalizeProduct(wooProduct)
 

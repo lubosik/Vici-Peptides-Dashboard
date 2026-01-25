@@ -12,10 +12,10 @@ import { WooCommerceSync } from '@/lib/sync/woocommerce-sync'
 
 export async function POST(request: NextRequest) {
   try {
-    // Get mode from query params or body
+    // Get mode from query params or body (default to incremental to avoid re-syncing existing data)
     const searchParams = request.nextUrl.searchParams
     const body = await request.json().catch(() => ({}))
-    const mode = searchParams.get('mode') || body.mode || 'full'
+    const mode = searchParams.get('mode') || body.mode || 'incremental'
     const syncOrders = searchParams.get('orders') !== 'false' && body.orders !== false
     const syncProducts = searchParams.get('products') !== 'false' && body.products !== false
     const syncCoupons = searchParams.get('coupons') !== 'false' && body.coupons !== false
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 // Also support GET for simple triggering
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-  const mode = searchParams.get('mode') || 'full'
+    const mode = searchParams.get('mode') || 'incremental'
 
   // Convert GET to POST internally
   const body = {

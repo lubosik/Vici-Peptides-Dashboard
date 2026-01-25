@@ -76,7 +76,12 @@ export function DeleteProductButton({ productId, productName, wooProductId }: De
       if (!signal.aborted && !wasAborted) {
         // Use router.refresh() with a small delay to ensure response is fully processed
         await new Promise(resolve => setTimeout(resolve, 100))
+        // Refresh the page to update product counts
         router.refresh()
+        // Force a hard navigation to ensure counts update everywhere
+        if (typeof window !== 'undefined') {
+          window.location.href = window.location.href
+        }
       }
     } catch (error) {
       // Don't show error if request was aborted (user cancelled or component unmounted)
