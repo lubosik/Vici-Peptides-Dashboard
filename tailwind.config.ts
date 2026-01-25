@@ -10,46 +10,42 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
-        },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
-        },
+        background: 'rgb(var(--background) / <alpha-value>)',
+        foreground: 'rgb(var(--foreground) / <alpha-value>)',
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
+          foreground: 'rgb(var(--primary-foreground) / <alpha-value>)',
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: 'rgb(var(--secondary) / <alpha-value>)',
+          foreground: 'rgb(var(--secondary-foreground) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          foreground: 'rgb(var(--accent-foreground) / <alpha-value>)',
+        },
+        muted: {
+          DEFAULT: 'rgb(var(--muted) / <alpha-value>)',
+          foreground: 'rgb(var(--muted-foreground) / <alpha-value>)',
+        },
+        border: 'rgb(var(--border) / <alpha-value>)',
+        input: 'rgb(var(--input) / <alpha-value>)',
+        ring: 'rgb(var(--ring) / <alpha-value>)',
+        card: {
+          DEFAULT: 'rgb(var(--card) / <alpha-value>)',
+          foreground: 'rgb(var(--card-foreground) / <alpha-value>)',
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: 'rgb(var(--destructive) / <alpha-value>)',
+          foreground: 'rgb(var(--destructive-foreground) / <alpha-value>)',
         },
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
         // Neon accent colors
         neon: {
-          cyan: 'rgb(147, 197, 253)',
-          pink: 'rgb(236, 72, 153)',
-          green: 'rgb(34, 197, 94)',
-          orange: 'rgb(249, 115, 22)',
-          yellow: 'rgb(234, 179, 8)',
+          cyan: 'rgb(120, 200, 255)',
+          pink: 'rgb(255, 100, 200)',
+          green: 'rgb(100, 255, 150)',
+          orange: 'rgb(255, 150, 100)',
+          purple: 'rgb(150, 100, 255)',
         },
       },
       fontFamily: {
@@ -61,11 +57,11 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       boxShadow: {
-        'neon-cyan': '0 0 10px rgba(147, 197, 253, 0.3), 0 0 20px rgba(147, 197, 253, 0.2)',
-        'neon-pink': '0 0 10px rgba(236, 72, 153, 0.3), 0 0 20px rgba(236, 72, 153, 0.2)',
-        'neon-green': '0 0 10px rgba(34, 197, 94, 0.3), 0 0 20px rgba(34, 197, 94, 0.2)',
-        'neon-orange': '0 0 10px rgba(249, 115, 22, 0.3), 0 0 20px rgba(249, 115, 22, 0.2)',
-        'neon-yellow': '0 0 10px rgba(234, 179, 8, 0.3), 0 0 20px rgba(234, 179, 8, 0.2)',
+        'neon-cyan': '0 0 10px rgba(120, 200, 255, 0.4), 0 0 20px rgba(120, 200, 255, 0.3), 0 0 30px rgba(120, 200, 255, 0.2)',
+        'neon-pink': '0 0 10px rgba(255, 100, 200, 0.4), 0 0 20px rgba(255, 100, 200, 0.3), 0 0 30px rgba(255, 100, 200, 0.2)',
+        'neon-green': '0 0 10px rgba(100, 255, 150, 0.4), 0 0 20px rgba(100, 255, 150, 0.3), 0 0 30px rgba(100, 255, 150, 0.2)',
+        'neon-orange': '0 0 10px rgba(255, 150, 100, 0.4), 0 0 20px rgba(255, 150, 100, 0.3), 0 0 30px rgba(255, 150, 100, 0.2)',
+        'glass': '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
       },
     },
   },

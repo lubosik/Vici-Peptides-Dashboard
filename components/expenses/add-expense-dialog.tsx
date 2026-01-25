@@ -16,6 +16,8 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
+import { useDemoStore } from '@/lib/demo/store'
+import { isDemoMode } from '@/lib/demo/mode'
 
 interface AddExpenseDialogProps {
   categories: string[]
@@ -25,6 +27,7 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const demoStore = useDemoStore()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -35,25 +38,33 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
       expense_date: formData.get('expense_date') as string,
       category: formData.get('category') as string,
       description: formData.get('description') as string,
-      amount: formData.get('amount') as string,
-      vendor: formData.get('vendor') as string || null,
-      notes: formData.get('notes') as string || null,
+      amount: parseFloat(formData.get('amount') as string),
+      vendor: (formData.get('vendor') as string) || null,
+      notes: (formData.get('notes') as string) || null,
     }
 
     try {
-      const response = await fetch('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(expense),
-      })
+      if (isDemoMode()) {
+        // Demo mode: use local store
+        demoStore.addExpense(expense)
+        setOpen(false)
+        router.refresh()
+      } else {
+        // Production mode: call API
+        const response = await fetch('/api/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(expense),
+        })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create expense')
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Failed to create expense')
+        }
+
+        setOpen(false)
+        router.refresh()
       }
-
-      setOpen(false)
-      router.refresh()
     } catch (error) {
       console.error('Error creating expense:', error)
       alert(error instanceof Error ? error.message : 'Failed to create expense')
@@ -70,7 +81,7 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
           Add Expense
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto glass-card border-border/30">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Add Expense</DialogTitle>
@@ -87,6 +98,7 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
                 type="date"
                 required
                 defaultValue={new Date().toISOString().split('T')[0]}
+                className="bg-input/50 border-border/50"
               />
             </div>
             <div className="grid gap-2">
@@ -107,6 +119,7 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
                 name="description"
                 placeholder="Expense description"
                 required
+                className="bg-input/50 border-border/50"
               />
             </div>
             <div className="grid gap-2">
@@ -119,6 +132,7 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
                 min="0"
                 placeholder="0.00"
                 required
+                className="bg-input/50 border-border/50"
               />
             </div>
             <div className="grid gap-2">
@@ -127,6 +141,7 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
                 id="vendor"
                 name="vendor"
                 placeholder="Vendor name"
+                className="bg-input/50 border-border/50"
               />
             </div>
             <div className="grid gap-2">
@@ -134,7 +149,7 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
               <textarea
                 id="notes"
                 name="notes"
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-input/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="Additional notes"
               />
             </div>

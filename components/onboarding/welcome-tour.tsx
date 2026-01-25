@@ -15,8 +15,8 @@ interface TourStep {
 const tourSteps: TourStep[] = [
   {
     id: 'dashboard',
-    title: 'Welcome to Vici Peptides Dashboard',
-    description: 'This is your analytics dashboard. Here you can see key metrics, revenue trends, and top products at a glance.',
+    title: 'Welcome to NeonMetrics Dashboard',
+    description: 'This is your analytics dashboard demo. Here you can see key metrics, revenue trends, and visualizations with sample data.',
   },
   {
     id: 'kpis',

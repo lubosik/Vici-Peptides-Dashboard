@@ -1,7 +1,7 @@
 {
   "name": "neonmetrics-dashboard",
   "version": "1.0.0",
-  "description": "NeonMetrics Analytics Dashboard - Demo Version",
+  "description": "NeonMetrics Analytics Dashboard Demo",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -37,7 +37,7 @@
     "recharts": "^2.10.3",
     "tailwind-merge": "^2.2.0",
     "tailwindcss-animate": "^1.0.7",
-    "zustand": "^4.5.0"
+    "zustand": "^5.0.10"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",

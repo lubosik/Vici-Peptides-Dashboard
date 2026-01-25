@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Menu, ChevronDown } from 'lucide-react'
+import { Menu, X, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -15,31 +15,26 @@ import {
 } from '@/components/ui/sheet'
 import {
   LayoutDashboard,
-  ShoppingCart,
-  Package,
-  DollarSign,
-  TrendingUp,
-  Settings,
   BarChart3,
   Star,
   MessageSquare,
   Mail,
-  Home,
+  Settings,
 } from 'lucide-react'
 
-const primaryNavigation = [
-  { name: 'DASHBOARD', href: '/', icon: Home },
-  { name: 'CHART', href: '/analytics', icon: BarChart3 },
-  { name: 'APPS', href: '/products', icon: Star },
-  { name: 'FORUM', href: '/orders', icon: MessageSquare },
-  { name: 'EMAIL', href: '/expenses', icon: Mail },
-  { name: 'SETTING', href: '/settings', icon: Settings },
+const navigation = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Chart', href: '/analytics', icon: BarChart3 },
+  { name: 'Apps', href: '/products', icon: Star },
+  { name: 'Forum', href: '/orders', icon: MessageSquare },
+  { name: 'Email', href: '/expenses', icon: Mail },
+  { name: 'Setting', href: '/settings', icon: Settings },
 ]
 
-const secondaryNavigation = [
-  { name: 'OPTION', href: '#' },
-  { name: 'CASE', href: '#' },
-  { name: 'LOCAL', href: '#' },
+const projects = [
+  { name: 'OPTION' },
+  { name: 'CASE' },
+  { name: 'LOCAL' },
 ]
 
 export function Sidebar() {
@@ -58,60 +53,62 @@ export function Sidebar() {
   }, [])
 
   const NavContent = ({ onNavigate }: { onNavigate?: () => void }) => (
-    <nav className="flex-1 space-y-6 px-4 py-6">
-      {/* Primary Navigation */}
-      <div>
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-3">
-          Dashboard
-        </div>
-        <div className="space-y-1">
-          {primaryNavigation.map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={onNavigate}
-                className={cn(
-                  'flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all relative group',
-                  isActive
-                    ? 'bg-primary/20 text-primary neon-text border-l-2 border-primary'
-                    : 'text-muted-foreground hover:bg-primary/10 hover:text-foreground'
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <item.icon className={cn(
-                    'h-5 w-5',
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  )} />
-                  <span>{item.name}</span>
-                </div>
-                <ChevronDown className="h-4 w-4 opacity-50" />
-              </Link>
-            )
-          })}
-        </div>
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-border/30">
+        <Menu className="h-5 w-5 text-foreground" />
+        <span className="text-xl font-semibold neon-text-cyan">Dashboard</span>
       </div>
 
-      {/* Secondary Navigation */}
-      <div>
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-3">
-          Projects
-        </div>
-        <div className="space-y-1">
-          {secondaryNavigation.map((item) => (
+      {/* Main Navigation */}
+      <nav className="flex-1 space-y-1 px-3 py-4">
+        {navigation.map((item) => {
+          const isActive = pathname === item.href || (item.href === '/' && pathname === '/')
+          return (
             <Link
               key={item.name}
               href={item.href}
               onClick={onNavigate}
-              className="flex items-center px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className={cn(
+                'flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors relative group',
+                isActive
+                  ? 'bg-accent/20 text-accent neon-glow-green'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+              )}
             >
-              {item.name}
+              <div className="flex items-center gap-3">
+                <item.icon className={cn(
+                  'h-5 w-5',
+                  isActive ? 'text-accent' : 'text-muted-foreground group-hover:text-foreground'
+                )} />
+                <span>{item.name}</span>
+              </div>
+              <ChevronRight className="h-4 w-4 opacity-50" />
             </Link>
+          )
+        })}
+      </nav>
+
+      {/* Separator */}
+      <div className="border-t border-border/30 mx-3" />
+
+      {/* Projects Section */}
+      <div className="px-6 py-4">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          PROJECTS
+        </h3>
+        <div className="space-y-1">
+          {projects.map((project) => (
+            <div
+              key={project.name}
+              className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors rounded-lg hover:bg-muted/30"
+            >
+              {project.name}
+            </div>
           ))}
         </div>
       </div>
-    </nav>
+    </div>
   )
 
   // Mobile: Hamburger menu with Sheet
@@ -119,26 +116,26 @@ export function Sidebar() {
     return (
       <>
         {/* Mobile Header with Hamburger */}
-        <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-16 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-4">
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-16 border-b border-border/30 glass-card flex items-center px-4">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden text-foreground">
+              <Button variant="ghost" size="icon" className="lg:hidden">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Open menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0 bg-card border-r border-border">
-              <SheetHeader className="border-b border-border px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <Menu className="h-5 w-5 text-primary" />
-                  <SheetTitle className="text-primary neon-text font-bold">Dashboard</SheetTitle>
-                </div>
+            <SheetContent side="left" className="w-64 p-0 glass-card border-r border-border/30">
+              <SheetHeader className="border-b border-border/30 px-6 py-4">
+                <SheetTitle className="flex items-center gap-3">
+                  <Menu className="h-5 w-5" />
+                  <span className="text-xl font-semibold neon-text-cyan">Dashboard</span>
+                </SheetTitle>
               </SheetHeader>
               <NavContent onNavigate={() => setIsOpen(false)} />
             </SheetContent>
           </Sheet>
           <div className="flex-1 flex items-center justify-center">
-            <span className="text-primary neon-text font-bold text-lg">NeonMetrics</span>
+            <span className="text-lg font-semibold neon-text-cyan">NeonMetrics</span>
           </div>
         </div>
         {/* Spacer for mobile header */}
@@ -149,11 +146,7 @@ export function Sidebar() {
 
   // Desktop: Traditional sidebar
   return (
-    <div className="hidden lg:flex h-screen w-64 flex-col border-r border-border bg-card/80 backdrop-blur-sm">
-      <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-        <Menu className="h-5 w-5 text-primary" />
-        <span className="text-primary neon-text font-bold text-lg">Dashboard</span>
-      </div>
+    <div className="hidden lg:flex h-screen w-64 flex-col border-r border-border/30 bg-[rgb(20,15,35)]">
       <NavContent />
     </div>
   )

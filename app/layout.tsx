@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'NeonMetrics Dashboard',
-  description: 'Analytics dashboard demo - NeonMetrics',
+  description: 'Analytics dashboard demo',
 }
 
 export default function RootLayout({
@@ -21,11 +21,15 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
-          <RealtimeProvider>{children}</RealtimeProvider>
+          {process.env.NEXT_PUBLIC_DEMO_MODE !== 'false' ? (
+            children
+          ) : (
+            <RealtimeProvider>{children}</RealtimeProvider>
+          )}
         </ThemeProvider>
       </body>
     </html>

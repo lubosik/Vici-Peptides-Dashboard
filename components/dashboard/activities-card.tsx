@@ -2,28 +2,36 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-export function ActivitiesCard() {
-  const activities = [
-    'New order received from Customer 1024',
-    'Product "Neon Pre-Workout" stock updated',
-    'Expense added: Marketing campaign',
-    'Order #DEMO-1001 status changed to shipped',
-    'New product "Performance Stack" added',
-  ]
+interface Activity {
+  text: string
+  highlight?: boolean
+}
 
+interface ActivitiesCardProps {
+  activities: Activity[]
+}
+
+export function ActivitiesCard({ activities }: ActivitiesCardProps) {
   return (
-    <Card className="glass-card">
-      <CardHeader>
-        <CardTitle className="text-sm font-medium uppercase">Activities</CardTitle>
+    <Card className="p-6">
+      <CardHeader className="p-0 pb-4">
+        <CardTitle className="text-sm font-semibold uppercase tracking-wider">
+          ACTIVITIES
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {activities.map((activity, idx) => (
-            <div key={idx} className="text-sm text-muted-foreground">
-              {activity}
-            </div>
-          ))}
-        </div>
+      <CardContent className="p-0 space-y-2">
+        {activities.map((activity, index) => (
+          <p
+            key={index}
+            className={`text-sm ${
+              activity.highlight
+                ? 'text-destructive'
+                : 'text-muted-foreground'
+            }`}
+          >
+            {activity.text}
+          </p>
+        ))}
       </CardContent>
     </Card>
   )

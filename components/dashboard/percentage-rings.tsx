@@ -5,39 +5,40 @@ import { Card, CardContent } from '@/components/ui/card'
 interface PercentageRingProps {
   percentage: number
   label: string
-  gradient: 'cyan' | 'pink' | 'green' | 'orange' | 'yellow'
+  gradient: 'cyan' | 'pink' | 'green' | 'orange' | 'purple'
 }
 
 const gradientColors = {
-  cyan: { from: '#67e8f9', to: '#3b82f6' },
-  pink: { from: '#f472b6', to: '#ec4899' },
-  green: { from: '#4ade80', to: '#10b981' },
-  orange: { from: '#fb923c', to: '#f59e0b' },
-  yellow: { from: '#fde047', to: '#eab308' },
+  cyan: { from: 'rgb(120, 200, 255)', to: 'rgb(100, 255, 200)' },
+  pink: { from: 'rgb(255, 100, 200)', to: 'rgb(255, 150, 250)' },
+  green: { from: 'rgb(100, 255, 150)', to: 'rgb(150, 255, 200)' },
+  orange: { from: 'rgb(255, 150, 100)', to: 'rgb(255, 200, 150)' },
+  purple: { from: 'rgb(150, 100, 255)', to: 'rgb(200, 150, 255)' },
 }
 
 function PercentageRing({ percentage, label, gradient }: PercentageRingProps) {
-  const circumference = 2 * Math.PI * 35 // radius = 35
+  const radius = 35
+  const circumference = 2 * Math.PI * radius
   const offset = circumference - (percentage / 100) * circumference
   const colors = gradientColors[gradient]
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative w-24 h-24 mb-2">
-        <svg className="w-24 h-24 transform -rotate-90">
+    <div className="flex flex-col items-center relative">
+      {/* Ring */}
+      <div className="relative w-20 h-20 mb-3">
+        <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 80 80">
           <circle
-            cx="48"
-            cy="48"
-            r="35"
-            stroke="currentColor"
+            cx="40"
+            cy="40"
+            r={radius}
+            stroke="rgba(60, 40, 90, 0.3)"
             strokeWidth="6"
             fill="none"
-            className="text-muted/20"
           />
           <circle
-            cx="48"
-            cy="48"
-            r="35"
+            cx="40"
+            cy="40"
+            r={radius}
             stroke={`url(#gradient-${gradient})`}
             strokeWidth="6"
             fill="none"
@@ -54,10 +55,23 @@ function PercentageRing({ percentage, label, gradient }: PercentageRingProps) {
           </defs>
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-lg font-bold text-foreground">{percentage}%</div>
+          <div className={`text-xl font-bold ${
+            gradient === 'cyan' ? 'neon-text-cyan' :
+            gradient === 'pink' ? 'neon-text-pink' :
+            gradient === 'green' ? 'neon-text-green' :
+            gradient === 'orange' ? 'neon-text-orange' :
+            'text-purple-400'
+          }`}>
+            {percentage}%
+          </div>
         </div>
       </div>
-      <div className="text-xs text-muted-foreground text-center">{label}</div>
+      
+      {/* Vertical line connecting to label */}
+      <div className="absolute top-20 left-1/2 -translate-x-1/2 w-0.5 h-4 bg-border/50" />
+      
+      {/* Label */}
+      <div className="text-xs text-muted-foreground text-center mt-4">{label}</div>
     </div>
   )
 }
@@ -68,15 +82,19 @@ interface PercentageRingsProps {
 
 export function PercentageRings({ rings }: PercentageRingsProps) {
   return (
-    <Card className="glass-card">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-around">
+    <Card className="p-6">
+      <CardContent className="p-0">
+        <div className="flex items-start justify-around relative">
+          {/* Horizontal connecting line */}
+          <div className="absolute top-20 left-0 right-0 h-0.5 bg-border/30" />
+          
           {rings.map((ring, idx) => (
-            <div key={idx} className="flex flex-col items-center relative">
+            <div key={idx} className="relative flex-1 flex flex-col items-center">
               <PercentageRing {...ring} />
+              {/* Connecting dots on horizontal line */}
               {idx < rings.length - 1 && (
-                <div className="absolute top-12 left-full w-8 h-0.5 bg-muted/30 flex items-center">
-                  <div className="w-1.5 h-1.5 rounded-full bg-muted/50"></div>
+                <div className="absolute top-20 left-full w-full h-0.5 bg-border/30 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-border/70" />
                 </div>
               )}
             </div>

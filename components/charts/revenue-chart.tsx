@@ -3,6 +3,7 @@
 import {
   LineChart,
   Line,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -33,49 +34,78 @@ export function RevenueChart({ data }: RevenueChartProps) {
   }))
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Revenue Over Time</CardTitle>
-        <CardDescription>Daily revenue and profit trends</CardDescription>
+    <Card className="p-6">
+      <CardHeader className="p-0 pb-4">
+        <CardTitle className="text-sm font-semibold uppercase tracking-wider">Revenue Over Time</CardTitle>
+        <CardDescription className="text-xs text-muted-foreground">Daily revenue and profit trends</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+            <defs>
+              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="rgb(255, 100, 200)" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="rgb(255, 100, 200)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(60, 40, 90, 0.3)" />
             <XAxis
               dataKey="date"
               className="text-xs"
-              tick={{ fill: 'currentColor' }}
+              tick={{ fill: 'rgb(180, 200, 220)' }}
+              stroke="rgba(60, 40, 90, 0.5)"
             />
             <YAxis
               className="text-xs"
-              tick={{ fill: 'currentColor' }}
+              tick={{ fill: 'rgb(180, 200, 220)' }}
               tickFormatter={(value) => `$${value.toLocaleString()}`}
+              stroke="rgba(60, 40, 90, 0.5)"
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '0.375rem',
+                backgroundColor: 'rgba(15, 10, 25, 0.95)',
+                border: '1px solid rgba(80, 50, 120, 0.5)',
+                borderRadius: '0.5rem',
+                color: 'rgb(240, 250, 255)',
               }}
               formatter={(value: number) => `$${value.toLocaleString()}`}
             />
-            <Legend />
+            <Legend 
+              wrapperStyle={{ color: 'rgb(180, 200, 220)' }}
+            />
+            {/* Filled area for Data 02 (profit) */}
+            <Area
+              type="monotone"
+              dataKey="profit"
+              stroke="none"
+              fill="url(#colorRevenue)"
+            />
+            {/* Line for Data 01 (revenue) */}
             <Line
               type="monotone"
               dataKey="revenue"
-              stroke="hsl(var(--primary))"
+              stroke="rgb(255, 150, 100)"
               strokeWidth={2}
-              name="Revenue"
-              dot={{ r: 3 }}
+              name="Data 01"
+              dot={{ r: 3, fill: 'rgb(255, 150, 100)' }}
             />
+            {/* Line for Data 02 (profit) */}
             <Line
               type="monotone"
               dataKey="profit"
-              stroke="hsl(var(--accent))"
+              stroke="rgb(255, 100, 200)"
               strokeWidth={2}
-              name="Profit"
-              dot={{ r: 3 }}
+              name="Data 02"
+              dot={{ r: 3, fill: 'rgb(255, 100, 200)' }}
+            />
+            {/* Line for Data 03 (orders as revenue proxy) */}
+            <Line
+              type="monotone"
+              dataKey="orders"
+              stroke="rgb(150, 100, 255)"
+              strokeWidth={2}
+              name="Data 03"
+              dot={{ r: 3, fill: 'rgb(150, 100, 255)' }}
             />
           </LineChart>
         </ResponsiveContainer>
