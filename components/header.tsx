@@ -3,7 +3,7 @@
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useDebounce } from '@/hooks/use-debounce'
 
 export function Header() {
@@ -38,12 +38,12 @@ export function Header() {
 
   const debouncedSearch = useDebounce(searchQuery, 500)
 
-  // Auto-search when debounced query changes
-  useCallback(() => {
-    if (debouncedSearch) {
-      handleSearch(debouncedSearch)
-    }
-  }, [debouncedSearch, handleSearch])
+  // Auto-search when debounced query changes (optional - can remove if you prefer Enter-only)
+  // useEffect(() => {
+  //   if (debouncedSearch) {
+  //     handleSearch(debouncedSearch)
+  //   }
+  // }, [debouncedSearch, handleSearch])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
