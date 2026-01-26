@@ -9,6 +9,9 @@ import { isDemoMode } from '@/lib/demo/mode'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+// Force dynamic rendering to prevent build-time errors
+export const dynamic = 'force-dynamic'
+
 export default function SettingsPage() {
   const store = useDemoStore()
   const router = useRouter()
