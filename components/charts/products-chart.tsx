@@ -25,14 +25,23 @@ interface ProductsChartProps {
   data: ProductData[]
 }
 
+interface ChartDataItem {
+  name: string
+  revenue: number
+  profit: number
+  profitColor: string
+  qtySold: number
+}
+
 export function ProductsChart({ data }: ProductsChartProps) {
   // Format data for chart (limit to top 10 for readability)
-  const chartData = data.slice(0, 10).map((item) => ({
+  const chartData: ChartDataItem[] = data.slice(0, 10).map((item) => ({
     name: item.productName.length > 20 
       ? item.productName.substring(0, 20) + '...' 
       : item.productName,
     revenue: item.revenue,
     profit: item.profit,
+    profitColor: item.profit >= 0 ? '#22c55e' : '#ef4444',
     qtySold: item.qtySold,
   }))
 
