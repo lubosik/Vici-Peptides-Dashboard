@@ -11,6 +11,9 @@ import { getExpenseSummary } from '@/lib/queries/expenses'
 
 export const dynamic = 'force-dynamic'
 
+// Force dynamic rendering to ensure real-time data
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 

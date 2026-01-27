@@ -195,8 +195,9 @@ export async function getRevenueOverTime(
 }
 
 /**
- * Get top products by revenue
- * Calculates revenue and profit from order_lines since products table doesn't have these columns
+ * Get top products by QTY sold (aggregated across all strengths)
+ * Excludes BAC Water products
+ * Groups products by base name (removes strength variations like "10mg", "20mg")
  */
 export async function getTopProducts(
   supabase: SupabaseClient,
@@ -235,6 +236,21 @@ export async function getTopProducts(
 
   if (productsError) throw productsError
 
+  // Helper function to extract base product name (remove strength variations)
+  // Examples: "Retatrutide 10mg" -> "Retatrutide", "BPC-157 5mg" -> "BPC-157"
+  const getBaseProductName = (productName: string): string => {
+    if (!productName) return ''
+    // Remove common strength patterns: "10mg", "20mg", "5mg", "10mg x 10 vials", etc.
+    // Also handle patterns like "5mg + 5mg" (combinations)
+    const cleaned = productName
+      .replace(/\s*\d+\s*mg\s*/gi, '') // Remove "10mg", "20mg", etc.
+      .replace(/\s*x\s*\d+\s*vials?/gi, '') // Remove "x 10 vials"
+      .replace(/\s*\+\s*\d+\s*mg/gi, '') // Remove "+ 5mg" patterns
+      .replace(/\s*\([^)]*\)/g, '') // Remove parenthetical content like "(10mg x 10 vials)"
+      .trim()
+    return cleaned || productName // Fallback to original if cleaning removes everything
+  }
+
   // Create product name map (filter out placeholder names)
   const productNameMap = new Map<number, string>()
   products?.forEach((p) => {
@@ -245,8 +261,8 @@ export async function getTopProducts(
     }
   })
 
-  // Aggregate by product
-  const productMap = new Map<number, {
+  // Aggregate by base product name (grouping all strengths together)
+  const baseProductMap = new Map<string, {
     productId: number
     productName: string
     revenue: number
@@ -256,15 +272,30 @@ export async function getTopProducts(
 
   orderLines?.forEach((line) => {
     const productId = line.product_id
-    const existing = productMap.get(productId) || {
-      productId,
-      productName: productNameMap.get(productId) || `Product ${productId}`,
+    const fullProductName = productNameMap.get(productId) || `Product ${productId}`
+    
+    // Skip BAC Water products (case-insensitive)
+    if (/bac\s*water/i.test(fullProductName)) {
+      return
+    }
+
+    // Get base product name (without strength)
+    const baseName = getBaseProductName(fullProductName)
+    
+    // Skip if base name is empty or still looks like BAC Water
+    if (!baseName || /bac\s*water/i.test(baseName)) {
+      return
+    }
+
+    const existing = baseProductMap.get(baseName) || {
+      productId, // Use first product ID found for this base name
+      productName: baseName, // Use cleaned base name
       revenue: 0,
       qtySold: 0,
       profit: 0,
     }
 
-    productMap.set(productId, {
+    baseProductMap.set(baseName, {
       ...existing,
       revenue: existing.revenue + (Number(line.line_total) || 0),
       qtySold: existing.qtySold + (Number(line.qty_ordered) || 0),
@@ -272,17 +303,16 @@ export async function getTopProducts(
     })
   })
 
-  // Convert to array, sort by revenue, and limit
-  // Also filter out placeholder products by name pattern
-  const topProducts = Array.from(productMap.values())
+  // Convert to array, filter out products with no sales, sort by QTY sold (descending), and limit
+  const topProducts = Array.from(baseProductMap.values())
     .filter((p) => {
       // Only products with sales
-      if (p.revenue <= 0) return false
+      if (p.qtySold <= 0) return false
       // Exclude placeholder products
       const isPlaceholder = /^Product\s+\d+$/i.test(p.productName)
       return !isPlaceholder
     })
-    .sort((a, b) => b.revenue - a.revenue)
+    .sort((a, b) => b.qtySold - a.qtySold) // Sort by QTY sold (not revenue)
     .slice(0, limit)
 
   return topProducts

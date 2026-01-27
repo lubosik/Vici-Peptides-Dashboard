@@ -170,7 +170,12 @@ export function DashboardContent({
         <Card>
           <CardHeader>
             <CardTitle>Top 5 Products</CardTitle>
-            <CardDescription>Best selling products by revenue</CardDescription>
+            <CardDescription>
+              Best selling products by quantity sold (aggregated across all strengths)
+              <span className="block text-xs text-muted-foreground mt-1">
+                Note: BAC Water products are excluded from this list
+              </span>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {topProducts.length === 0 ? (
@@ -180,7 +185,7 @@ export function DashboardContent({
             ) : (
               <div className="space-y-4">
                 {topProducts.slice(0, 5).map((product, index) => (
-                  <div key={product.productId} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div key={`${product.productId}-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
                         {index + 1}
@@ -188,7 +193,7 @@ export function DashboardContent({
                       <div>
                         <div className="font-medium">{product.productName}</div>
                         <div className="text-sm text-muted-foreground">
-                          {product.qtySold} sold
+                          {product.qtySold.toLocaleString()} units sold
                         </div>
                       </div>
                     </div>
