@@ -1,7 +1,8 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { Search, LogOut } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { useState, useCallback } from 'react'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -51,6 +52,18 @@ export function Header() {
     }
   }
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      router.push('/login')
+      router.refresh()
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Force redirect even if API call fails
+      router.push('/login')
+    }
+  }
+
   return (
     <div className="h-16 border-b border-border bg-background flex items-center justify-between px-6">
       {/* Search Bar - Centered */}
@@ -68,6 +81,18 @@ export function Header() {
             <Search className="h-4 w-4 text-primary" />
           </div>
         </div>
+      </div>
+      {/* Logout Button */}
+      <div className="ml-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleLogout}
+          className="flex items-center gap-2"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="hidden sm:inline">Logout</span>
+        </Button>
       </div>
     </div>
   )
