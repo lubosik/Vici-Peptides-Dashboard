@@ -31,11 +31,18 @@ export function middleware(request: NextRequest) {
   const authUser = process.env.BASIC_AUTH_USER
   const authPass = process.env.BASIC_AUTH_PASS
 
-  // If credentials not configured, allow access (but log warning)
+  // If credentials not configured in production, block access
   if (!authUser || !authPass) {
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('⚠️  Basic Auth credentials not configured - site is unprotected!')
+    if (process.env.NODE_ENV === 'production' || process.env.VERCEL === '1') {
+      console.error('⚠️  Basic Auth credentials not configured - blocking access!')
+      return new NextResponse('Unauthorized: Basic Auth not configured', {
+        status: 401,
+        headers: {
+          'WWW-Authenticate': 'Basic realm="Vici Peptides Dashboard", charset="UTF-8"',
+        },
+      })
     }
+    // In development, allow access if not configured
     return NextResponse.next()
   }
 
@@ -55,6 +62,9 @@ export function middleware(request: NextRequest) {
   // Decode credentials
   try {
     const base64Credentials = authHeader.split(' ')[1]
+    if (!base64Credentials) {
+      throw new Error('Invalid auth header')
+    }
     const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8')
     const [username, password] = credentials.split(':')
 
@@ -63,7 +73,13 @@ export function middleware(request: NextRequest) {
       return NextResponse.next()
     }
   } catch (error) {
-    // Invalid auth header format
+    // Invalid auth header format - return 401 to prompt again
+    return new NextResponse('Unauthorized', {
+      status: 401,
+      headers: {
+        'WWW-Authenticate': 'Basic realm="Vici Peptides Dashboard", charset="UTF-8"',
+      },
+    })
   }
 
   // Invalid credentials
