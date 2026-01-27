@@ -28,8 +28,9 @@ export function middleware(request: NextRequest) {
   }
 
   // Get credentials from environment variables
-  const authUser = process.env.BASIC_AUTH_USER
-  const authPass = process.env.BASIC_AUTH_PASS
+  // Note: Must use NEXT_PUBLIC_ prefix for Edge Runtime (Vercel middleware)
+  const authUser = process.env.NEXT_PUBLIC_BASIC_AUTH_USER || process.env.BASIC_AUTH_USER
+  const authPass = process.env.NEXT_PUBLIC_BASIC_AUTH_PASS || process.env.BASIC_AUTH_PASS
 
   // If credentials not configured in production, block access
   if (!authUser || !authPass) {

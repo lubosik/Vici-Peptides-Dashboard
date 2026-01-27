@@ -12,14 +12,16 @@ Your dashboard is showing "Unauthorized" because the Basic Auth environment vari
 4. Add these two variables:
 
 **Variable 1:**
-- **Name:** `BASIC_AUTH_USER`
+- **Name:** `NEXT_PUBLIC_BASIC_AUTH_USER`
 - **Value:** `Vici-admins`
 - **Environment:** Production, Preview, Development (select all)
 
 **Variable 2:**
-- **Name:** `BASIC_AUTH_PASS`
+- **Name:** `NEXT_PUBLIC_BASIC_AUTH_PASS`
 - **Value:** `Vic!Pept!des#45`
 - **Environment:** Production, Preview, Development (select all)
+
+**Important:** The `NEXT_PUBLIC_` prefix is required for middleware to access these variables in Vercel's Edge Runtime.
 
 5. Click **Save** for each variable
 
@@ -50,3 +52,5 @@ The credentials are:
 - **Password:** `Vic!Pept!des#45`
 
 You can change these in Vercel's environment variables anytime.
+
+**Note:** Variables prefixed with `NEXT_PUBLIC_` are exposed to the client bundle. This is required for middleware to work on Vercel's Edge Runtime. Basic Auth is a simple password gate - for production-grade security, consider implementing proper authentication (Supabase Auth, NextAuth, etc.).
