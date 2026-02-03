@@ -290,13 +290,14 @@ export async function getTopProducts(
 
   const { data: orderLines, error: linesError } = await orderLinesQuery
 
-  // Get all products with qty_sold (exclude placeholder products)
+  // Get products: in-stock or low-stock only (exclude OUT OF STOCK), with sales, exclude placeholders
   const placeholderIds = [203, 209, 212, 220, 221, 222]
   let productsQuery = supabase
     .from('products')
-    .select('product_id, product_name, qty_sold')
+    .select('product_id, product_name, qty_sold, stock_status, current_stock')
     .not('product_id', 'in', `(${placeholderIds.join(',')})`)
-    .gt('qty_sold', 0) // Only products with sales
+    .gt('qty_sold', 0)
+    .in('stock_status', ['In Stock', 'LOW STOCK'])
 
   const { data: products, error: productsError } = await productsQuery
 
@@ -381,10 +382,11 @@ export async function getTopProducts(
       })
     })
   } else if (orderLines) {
-    // Use order_lines data (preferred method)
+    // Use order_lines data (preferred method); only include products that are in-stock (in productNameMap)
     orderLines.forEach((line) => {
       const productId = line.product_id
-      const fullProductName = productNameMap.get(productId) || `Product ${productId}`
+      const fullProductName = productNameMap.get(productId)
+      if (!fullProductName) return // Skip out-of-stock or unknown products
       
       // Skip BAC Water products (case-insensitive)
       if (/bac\s*water/i.test(fullProductName)) {

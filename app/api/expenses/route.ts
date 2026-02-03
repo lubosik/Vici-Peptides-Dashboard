@@ -76,6 +76,8 @@ export async function POST(request: NextRequest) {
     })
 
     revalidatePath('/expenses')
+    revalidatePath('/')
+    revalidatePath('/analytics')
     return NextResponse.json(expense, { status: 201 })
   } catch (error) {
     console.error('Error creating expense:', error)

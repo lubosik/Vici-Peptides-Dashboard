@@ -83,12 +83,14 @@ export async function getExpenses(
 }
 
 /**
- * Get expense summary (totals, by category, by month)
+ * Get expense summary (totals, by category, by month) with optional filters.
+ * Use this for "Total Expenses" so the sum is across ALL matching rows, not just the current page.
  */
 export async function getExpenseSummary(
   supabase: SupabaseClient,
   dateFrom?: string,
-  dateTo?: string
+  dateTo?: string,
+  filters?: ExpenseFilters
 ): Promise<ExpenseSummary> {
   let query = supabase
     .from('expenses')
@@ -100,6 +102,14 @@ export async function getExpenseSummary(
 
   if (dateTo) {
     query = query.lte('expense_date', dateTo)
+  }
+
+  if (filters?.category) {
+    query = query.eq('category', filters.category)
+  }
+
+  if (filters?.search) {
+    query = query.or(`description.ilike.%${filters.search}%,vendor.ilike.%${filters.search}%`)
   }
 
   const { data, error } = await query

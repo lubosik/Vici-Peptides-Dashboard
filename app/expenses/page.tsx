@@ -64,7 +64,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
     const [expensesResult, categoriesFromDb, expenseSummary] = await Promise.all([
       getExpenses(supabase, filters, page, 20, sortBy, sortOrder),
       getExpenseCategories(supabase),
-      getExpenseSummary(supabase, filters.dateFrom, filters.dateTo),
+      getExpenseSummary(supabase, filters.dateFrom, filters.dateTo, filters),
     ])
     expensesData = expensesResult
     // Ensure categories list is never empty so Add Expense dropdown has options
@@ -92,7 +92,13 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
     }
   }
 
-  const totalAmount = expensesData.expenses.reduce((sum: number, e: any) => sum + e.amount, 0)
+  // Total and This Month from summary (all pages), not just current page
+  const totalExpensesAllPages = expenseSummary?.totalExpenses ?? 0
+  const now = new Date()
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const thisMonthTotal = expenseSummary?.expensesByMonth?.find((m: any) => m.month === currentMonthKey)?.total ?? 0
+  const totalCount = expensesData.total
+  const averageExpense = totalCount > 0 ? totalExpensesAllPages / totalCount : 0
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -132,9 +138,9 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                 <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(totalAmount)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(totalExpensesAllPages)}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {expensesData.total} expenses
+                  {totalCount} expenses (all pages)
                 </p>
               </CardContent>
             </Card>
@@ -143,18 +149,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                 <CardTitle className="text-sm font-medium">This Month</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(
-                    expensesData.expenses
-                      .filter((e: any) => {
-                        const expenseDate = new Date(e.expense_date)
-                        const now = new Date()
-                        return expenseDate.getMonth() === now.getMonth() &&
-                               expenseDate.getFullYear() === now.getFullYear()
-                      })
-                      .reduce((sum: number, e: any) => sum + e.amount, 0)
-                  )}
-                </div>
+                <div className="text-2xl font-bold">{formatCurrency(thisMonthTotal)}</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Current month total
                 </p>
@@ -165,11 +160,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                 <CardTitle className="text-sm font-medium">Average Expense</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(
-                    expensesData.total > 0 ? totalAmount / expensesData.total : 0
-                  )}
-                </div>
+                <div className="text-2xl font-bold">{formatCurrency(averageExpense)}</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Per expense
                 </p>

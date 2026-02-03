@@ -58,11 +58,13 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
         })
 
         if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || 'Failed to create expense')
+          const err = await response.json()
+          throw new Error(err.error || 'Failed to create expense')
         }
 
         setOpen(false)
+        // Go to expenses page 1 so the new expense (newest) is visible at top
+        router.push('/expenses')
         router.refresh()
       }
     } catch (error) {
