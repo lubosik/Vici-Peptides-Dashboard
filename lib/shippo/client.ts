@@ -78,6 +78,33 @@ export interface ShippoTransaction {
   commercial_invoice_url?: string
 }
 
+/** Shippo Order (from GET /orders/ list or single order) */
+export interface ShippoOrder {
+  object_id: string
+  order_number: string
+  order_status: string
+  placed_at: string
+  shipping_cost: string
+  shipping_cost_currency: string
+  shipping_method?: string
+  subtotal_price: string
+  total_price: string
+  total_tax: string
+  currency: string
+  weight?: string
+  weight_unit?: string
+  to_address?: Record<string, unknown>
+  line_items?: Array<Record<string, unknown>>
+  transactions?: unknown[]
+}
+
+export interface ShippoOrdersListResponse {
+  count: number
+  next: string | null
+  previous: string | null
+  results: ShippoOrder[]
+}
+
 export class ShippoError extends Error {
   constructor(
     message: string,
@@ -95,6 +122,86 @@ export class ShippoClient {
 
   constructor(config: ShippoConfig) {
     this.config = config
+  }
+
+  /**
+   * List orders from Shippo (GET /orders/)
+   * Returns paginated orders with shipping_cost, order_number, etc.
+   */
+  async listOrders(params?: {
+    page?: number
+    results?: number
+    start_date?: string
+    end_date?: string
+  }): Promise<ShippoOrdersListResponse> {
+    const url = new URL(`${this.baseUrl}/orders/`)
+    if (params?.page != null) url.searchParams.set('page', String(params.page))
+    if (params?.results != null) url.searchParams.set('results', String(params.results))
+    if (params?.start_date) url.searchParams.set('start_date', params.start_date)
+    if (params?.end_date) url.searchParams.set('end_date', params.end_date)
+
+    try {
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          Authorization: `ShippoToken ${this.config.apiToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new ShippoError(
+          `Shippo API error: ${response.status} ${response.statusText}`,
+          response.status,
+          data
+        )
+      }
+
+      return data as ShippoOrdersListResponse
+    } catch (error) {
+      if (error instanceof ShippoError) throw error
+      throw new ShippoError(
+        `Failed to list Shippo orders: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        undefined,
+        error
+      )
+    }
+  }
+
+  /**
+   * Fetch next page of orders using the URL returned in response.next
+   */
+  async listOrdersNext(nextUrl: string): Promise<ShippoOrdersListResponse> {
+    try {
+      const response = await fetch(nextUrl, {
+        method: 'GET',
+        headers: {
+          Authorization: `ShippoToken ${this.config.apiToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new ShippoError(
+          `Shippo API error: ${response.status} ${response.statusText}`,
+          response.status,
+          data
+        )
+      }
+
+      return data as ShippoOrdersListResponse
+    } catch (error) {
+      if (error instanceof ShippoError) throw error
+      throw new ShippoError(
+        `Failed to fetch next Shippo orders: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        undefined,
+        error
+      )
+    }
   }
 
   /**

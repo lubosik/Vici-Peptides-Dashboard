@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createExpense, updateExpense, deleteExpense } from '@/lib/queries/expenses'
 
@@ -47,13 +48,14 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.expense_date || !body.category || !body.description || !body.amount) {
+    // Validate required fields; treat empty category as "Uncategorized"
+    if (!body.expense_date || !body.description || body.amount == null) {
       return NextResponse.json(
-        { error: 'Missing required fields: expense_date, category, description, amount' },
+        { error: 'Missing required fields: expense_date, description, amount' },
         { status: 400 }
       )
     }
+    const category = (body.category && String(body.category).trim()) || 'Uncategorized'
 
     // Validate amount
     const amount = Number(body.amount)
@@ -66,13 +68,14 @@ export async function POST(request: NextRequest) {
 
     const expense = await createExpense(supabase, {
       expense_date: body.expense_date,
-      category: body.category,
+      category,
       description: body.description,
       amount: amount,
       vendor: body.vendor || null,
       notes: body.notes || null,
     })
 
+    revalidatePath('/expenses')
     return NextResponse.json(expense, { status: 201 })
   } catch (error) {
     console.error('Error creating expense:', error)

@@ -6,12 +6,14 @@ import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { getExpenses, getExpenseCategories, getExpenseSummary } from '@/lib/queries/expenses'
+import { getExpenseCategoriesFromLists } from '@/lib/utils/expense-categories'
 import { formatCurrency } from '@/lib/metrics/calculations'
 import Link from 'next/link'
 import { Plus, Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ExpensesChart } from '@/components/charts/expenses-chart'
 import { AddExpenseDialog } from '@/components/expenses/add-expense-dialog'
 import { DeleteExpenseButton } from '@/components/expenses/delete-expense-button'
+import { SyncShippoShippingButton } from '@/components/expenses/sync-shippo-shipping-button'
 
 // Force dynamic rendering to prevent build-time errors when env vars aren't available
 export const dynamic = 'force-dynamic'
@@ -59,16 +61,21 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   let errorMessage = ''
 
   try {
-    [expensesData, categories, expenseSummary] = await Promise.all([
+    const [expensesResult, categoriesFromDb, expenseSummary] = await Promise.all([
       getExpenses(supabase, filters, page, 20, sortBy, sortOrder),
       getExpenseCategories(supabase),
       getExpenseSummary(supabase, filters.dateFrom, filters.dateTo),
     ])
+    expensesData = expensesResult
+    // Ensure categories list is never empty so Add Expense dropdown has options
+    const defaultCategories = getExpenseCategoriesFromLists()
+    const withShipping = defaultCategories.includes('Shipping') ? defaultCategories : ['Shipping', ...defaultCategories]
+    categories = categoriesFromDb.length > 0 ? categoriesFromDb : withShipping
   } catch (error) {
     console.error('Error fetching expenses:', error)
     hasError = true
     errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    // Provide fallback values
+    // Provide fallback values; keep default categories so Add Expense still works
     expensesData = {
       expenses: [],
       total: 0,
@@ -76,7 +83,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
       pageSize: 20,
       totalPages: 0,
     }
-    categories = []
+    categories = ['Shipping', ...getExpenseCategoriesFromLists()]
     expenseSummary = {
       total: 0,
       thisMonth: 0,
@@ -107,7 +114,8 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                   </div>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <SyncShippoShippingButton />
                 <Button variant="outline">
                   <Download className="mr-2 h-4 w-4" />
                   Export CSV
@@ -247,6 +255,8 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                         <TableHead>Category</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead>Vendor</TableHead>
+                        <TableHead>Order</TableHead>
+                        <TableHead>Source</TableHead>
                         <TableHead className="text-right">
                           <Link href={`/expenses?${new URLSearchParams({ ...searchParams, sortBy: 'amount', sortOrder: sortBy === 'amount' && sortOrder === 'asc' ? 'desc' : 'asc' }).toString()}`}>
                             Amount
@@ -271,6 +281,27 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {expense.vendor || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {expense.order_number ? (
+                              <Link
+                                href={`/orders/${encodeURIComponent(expense.order_number)}`}
+                                className="text-primary hover:underline font-medium"
+                              >
+                                {expense.order_number}
+                              </Link>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {expense.source ? (
+                              <span className="px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                                {expense.source === 'shippo' ? 'Shippo' : expense.source}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">Manual</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right font-medium">
                             {formatCurrency(expense.amount)}

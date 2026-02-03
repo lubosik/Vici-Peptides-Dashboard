@@ -3,8 +3,9 @@
  */
 
 export function getExpenseCategoriesFromLists(): string[] {
-  // Categories from Lists.csv Expense_Categories column
+  // Categories from Lists.csv Expense_Categories column; Shipping for Shippo sync
   return [
+    'Shipping',
     'Packaging',
     'Labels',
     'Tape',

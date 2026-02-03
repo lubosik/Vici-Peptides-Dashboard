@@ -99,29 +99,24 @@ export function useRealtime({
       .subscribe((status, err) => {
         // Check if we're in cleanup phase using ref
         const isCleanup = isCleaningUpRef.current
-        
+
         if (status === 'SUBSCRIBED') {
           setIsConnected(true)
-          // Only log success in dev mode to reduce console noise
           if (process.env.NODE_ENV === 'development') {
             console.log(`✅ Realtime subscription SUBSCRIBED for ${table}`)
           }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           setIsConnected(false)
-          // Only log errors if not during cleanup
-          if (!isCleanup) {
+          // Don't spam console: Realtime may be disabled in Supabase or RLS may block anon.
+          // App still works; data updates on page refresh or when user navigates.
+          if (!isCleanup && process.env.NODE_ENV === 'development') {
             if (err) {
-              console.error(`❌ Realtime subscription ${status} for ${table}:`, err)
-            } else {
-              console.warn(`⚠️ Realtime subscription ${status} for ${table}`)
+              console.warn(`Realtime ${table}: ${status}`, err.message || err)
             }
           }
         } else if (status === 'CLOSED') {
           setIsConnected(false)
-          // Suppress all CLOSED logs - they're expected during cleanup/reconnection
-          // CLOSED is a normal part of the lifecycle and not an error
         } else {
-          // Other statuses like JOINING, etc.
           setIsConnected(false)
         }
       })
