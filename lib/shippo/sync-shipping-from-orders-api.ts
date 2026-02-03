@@ -5,7 +5,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import { ShippoClient, ShippoOrder } from './client'
+import { ShippoClient, ShippoOrdersListResponse } from './client'
 
 /** Normalize Shippo order_number to match our DB format. We use "Order #1068", Shippo uses "#1068". */
 export function normalizeShippoOrderNumberForMatch(shippoOrderNumber: string): string {
@@ -57,7 +57,7 @@ export async function syncShippingCostsFromShippoOrders(
   let pageCount = 0
 
   do {
-    const response = nextUrl
+    const response: ShippoOrdersListResponse = nextUrl
       ? await shippoClient.listOrdersNext(nextUrl)
       : await shippoClient.listOrders({ page: 1, results: resultsPerPage })
 
