@@ -139,29 +139,14 @@ export async function syncShippingCostsFromShippoOrders(
           .eq('category', 'shipping')
           .maybeSingle()
 
+        // Only sync expenses that are NOT already on the dashboard (insert only, no updates)
         if (existingExpense) {
-          const { error: updateErr } = await supabase
-            .from('expenses')
-            .update(expenseData)
-            .eq('expense_id', existingExpense.expense_id)
-
-          if (updateErr) {
-            errors++
-            details.push({
-              shippoOrderNumber,
-              ourOrderNumber: ourOrder.order_number,
-              action: 'error',
-              error: updateErr.message,
-            })
-          } else {
-            updated++
-            processed++
-            details.push({
-              shippoOrderNumber,
-              ourOrderNumber: ourOrder.order_number,
-              action: 'updated',
-            })
-          }
+          skipped++
+          details.push({
+            shippoOrderNumber,
+            ourOrderNumber: ourOrder.order_number,
+            action: 'skipped',
+          })
         } else {
           const { error: insertErr } = await supabase
             .from('expenses')

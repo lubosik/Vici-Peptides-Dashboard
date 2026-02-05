@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createShippoClient } from '@/lib/shippo/client'
 import { syncShippingCostsFromShippoOrders } from '@/lib/shippo/sync-shipping-from-orders-api'
@@ -28,6 +29,10 @@ export async function GET(request: NextRequest) {
       maxPages,
       resultsPerPage,
     })
+
+    revalidatePath('/expenses')
+    revalidatePath('/')
+    revalidatePath('/analytics')
 
     return NextResponse.json({
       success: result.success,

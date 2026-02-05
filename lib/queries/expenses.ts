@@ -83,6 +83,23 @@ export async function getExpenses(
 }
 
 /**
+ * Get grand total of all expenses (all pages, no filters). Use for "Total Expenses" card.
+ * Fetches amounts with a high limit and sums in code so the total is always correct.
+ */
+export async function getExpenseGrandTotal(supabase: SupabaseClient): Promise<{ total: number; count: number }> {
+  const { data, error, count } = await supabase
+    .from('expenses')
+    .select('amount', { count: 'exact' })
+    .limit(10000)
+
+  if (error) throw error
+
+  const rows = data || []
+  const total = rows.reduce((sum, e) => sum + (Number(e?.amount) ?? 0), 0)
+  return { total, count: count ?? rows.length }
+}
+
+/**
  * Get expense summary (totals, by category, by month) with optional filters.
  * Use this for "Total Expenses" so the sum is across ALL matching rows, not just the current page.
  */
@@ -95,6 +112,7 @@ export async function getExpenseSummary(
   let query = supabase
     .from('expenses')
     .select('expense_date, category, amount')
+    .limit(10000)
 
   if (dateFrom) {
     query = query.gte('expense_date', dateFrom)
@@ -118,7 +136,7 @@ export async function getExpenseSummary(
 
   const expenses = (data || []).map((e) => ({
     ...e,
-    amount: Number(e.amount) || 0,
+    amount: Number(e?.amount) ?? 0,
   }))
 
   // Calculate totals

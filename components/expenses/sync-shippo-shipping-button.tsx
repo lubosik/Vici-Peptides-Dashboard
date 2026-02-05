@@ -20,7 +20,7 @@ export function SyncShippoShippingButton() {
         throw new Error(data.error || data.message || 'Sync failed')
       }
       setMessage(
-        `Synced: ${data.created ?? 0} created, ${data.updated ?? 0} updated, ${data.skipped ?? 0} skipped.`
+        `Synced: ${data.created ?? 0} new expense(s) added. ${data.skipped ?? 0} already on dashboard.`
       )
       router.refresh()
     } catch (e) {

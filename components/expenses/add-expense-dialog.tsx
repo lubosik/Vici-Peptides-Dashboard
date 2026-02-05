@@ -63,8 +63,9 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
         }
 
         setOpen(false)
-        // Go to expenses page 1 so the new expense (newest) is visible at top
-        router.push('/expenses')
+        // Invalidate cache then navigate so the new expense and totals show
+        router.refresh()
+        router.push('/expenses?r=' + Date.now())
         router.refresh()
       }
     } catch (error) {
