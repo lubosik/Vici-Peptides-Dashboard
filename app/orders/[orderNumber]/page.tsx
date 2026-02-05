@@ -52,79 +52,20 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   try {
     let { order, lineItems } = await getOrderWithLines(supabase, orderNumber)
 
-    // If no line items found and we have a WooCommerce order ID, try to sync from WooCommerce
-    if ((!lineItems || lineItems.length === 0) && order && order.woo_order_id) {
+    // If no line items found and we have a WooCommerce order ID, sync from WooCommerce (ensures products exist)
+    if ((!lineItems || lineItems.length === 0) && order?.order_number && order?.woo_order_id) {
       try {
-        // Import and use the API route logic directly (server-side)
-        const { createAdminClient } = await import('@/lib/supabase/admin')
-        const adminSupabase = createAdminClient()
-        
-        // Get WooCommerce credentials
-        const storeUrl = process.env.WOOCOMMERCE_STORE_URL
-        const consumerKey = process.env.WOOCOMMERCE_CONSUMER_KEY
-        const consumerSecret = process.env.WOOCOMMERCE_CONSUMER_SECRET
-
-        if (storeUrl && consumerKey && consumerSecret) {
-          // Fetch from WooCommerce directly
-          const url = `${storeUrl}/wp-json/wc/v3/orders/${order.woo_order_id}`
-          const urlObj = new URL(url)
-          urlObj.searchParams.append('consumer_key', consumerKey)
-          urlObj.searchParams.append('consumer_secret', consumerSecret)
-          
-          const response = await fetch(urlObj.toString(), {
-            headers: { 'Content-Type': 'application/json' },
-            cache: 'no-store',
-          })
-          
-          if (response.ok) {
-            const wooOrder = await response.json()
-            
-            // Upsert line items if we have them
-            if (wooOrder.line_items && Array.isArray(wooOrder.line_items) && wooOrder.line_items.length > 0) {
-              for (const item of wooOrder.line_items) {
-                const lineItemData = {
-                  order_id: wooOrder.id,
-                  id: item.id,
-                  order_number: order.order_number,
-                  product_id: item.product_id || 0,
-                  variation_id: item.variation_id || null,
-                  name: item.name || '',
-                  quantity: parseInt(item.quantity || '1'),
-                  tax_class: item.tax_class || null,
-                  subtotal: String(item.subtotal || '0'),
-                  subtotal_tax: String(item.subtotal_tax || '0'),
-                  total: String(item.total || '0'),
-                  total_tax: String(item.total_tax || '0'),
-                  sku: item.sku || null,
-                  price: String(item.price || '0'),
-                  taxes: item.taxes || null,
-                  meta_data: item.meta_data || null,
-                  raw_json: item,
-                  qty_ordered: parseInt(item.quantity || '1'),
-                  customer_paid_per_unit: parseFloat(item.price || '0'),
-                  our_cost_per_unit: 0,
-                }
-
-                await adminSupabase
-                  .from('order_lines')
-                  .upsert(lineItemData, {
-                    onConflict: 'order_id,id',
-                    ignoreDuplicates: false,
-                  })
-              }
-              
-              // Re-fetch from database after sync
-              const refreshed = await getOrderWithLines(supabase, order.order_number)
-              if (refreshed.lineItems && refreshed.lineItems.length > 0) {
-                lineItems = refreshed.lineItems
-                order = refreshed.order
-              }
-            }
+        const { syncOrderLineItemsFromWoo } = await import('@/lib/sync/sync-order-line-items')
+        const result = await syncOrderLineItemsFromWoo(order.order_number)
+        if (result.success && result.line_items_synced > 0) {
+          const refreshed = await getOrderWithLines(supabase, order.order_number)
+          if (refreshed.lineItems?.length) {
+            lineItems = refreshed.lineItems
+            order = refreshed.order
           }
         }
       } catch (syncError) {
         console.error('Error syncing line items from WooCommerce:', syncError)
-        // Continue with existing data
       }
     }
 

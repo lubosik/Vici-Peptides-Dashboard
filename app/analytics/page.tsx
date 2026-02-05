@@ -8,6 +8,8 @@ import { NetProfitChart } from '@/components/charts/net-profit-chart'
 import { getNetProfitOverTime } from '@/lib/metrics/net-profit'
 import { getExpenseSummary } from '@/lib/queries/expenses'
 import { ExpensesChart } from '@/components/charts/expenses-chart'
+import { AnalyticsClient } from '@/components/analytics/analytics-client'
+import { WooReportsBlock } from '@/components/analytics/woo-reports-block'
 
 // Force dynamic rendering to prevent build-time errors when env vars aren't available
 export const dynamic = 'force-dynamic'
@@ -117,9 +119,10 @@ export default async function AnalyticsPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto lg:ml-0">
-        <div className="container mx-auto p-3 sm:p-4 lg:p-6 xl:p-8">
-          <div className="mb-4 sm:mb-6 lg:mb-8 pt-2 sm:pt-0">
+      <AnalyticsClient>
+        <main className="flex-1 overflow-y-auto lg:ml-0">
+          <div className="container mx-auto p-3 sm:p-4 lg:p-6 xl:p-8">
+            <div className="mb-4 sm:mb-6 lg:mb-8 pt-2 sm:pt-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Analytics</h1>
             <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
               Comprehensive analytics and insights
@@ -132,6 +135,9 @@ export default async function AnalyticsPage() {
               </div>
             )}
           </div>
+
+          {/* WooCommerce Reports (top sellers, sales, orders totals) - refreshes every 60s */}
+          <WooReportsBlock />
 
           {/* Revenue and Profit Charts */}
           <div className="grid gap-6 md:grid-cols-2 mb-6">
@@ -254,8 +260,9 @@ export default async function AnalyticsPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </main>
+          </div>
+        </main>
+      </AnalyticsClient>
     </div>
   )
 }

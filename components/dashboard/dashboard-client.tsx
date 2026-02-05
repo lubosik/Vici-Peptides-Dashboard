@@ -11,12 +11,12 @@ export function DashboardClient({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { isConnected } = useRealtimeContext()
 
-  // Periodic refetch fallback (90 seconds)
+  // Periodic refetch for near real-time updates (60 seconds)
   usePeriodicRefetch({
     refetch: () => {
       router.refresh()
     },
-    intervalMs: 90000,
+    intervalMs: 60000,
     enabled: true,
   })
 

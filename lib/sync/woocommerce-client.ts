@@ -230,6 +230,80 @@ export class WooCommerceClient {
   }
 
   /**
+   * WooCommerce Reports API - list available reports
+   */
+  async getReports(): Promise<any[]> {
+    return this.request('reports')
+  }
+
+  /**
+   * Sales report - total_sales, net_sales, total_orders, total_items, etc.
+   * Params: period (week|month|last_month|year), date_min, date_max (YYYY-MM-DD)
+   */
+  async getSalesReport(params?: {
+    period?: string
+    date_min?: string
+    date_max?: string
+  }): Promise<any[]> {
+    const query: Record<string, string> = {}
+    if (params?.period) query.period = params.period
+    if (params?.date_min) query.date_min = params.date_min
+    if (params?.date_max) query.date_max = params.date_max
+    return this.request('reports/sales', { params: query })
+  }
+
+  /**
+   * Top sellers report - product_id, title, quantity
+   * Params: period (week|month|last_month|year), date_min, date_max
+   */
+  async getTopSellersReport(params?: {
+    period?: string
+    date_min?: string
+    date_max?: string
+  }): Promise<Array<{ title: string; product_id: number; quantity: number }>> {
+    const query: Record<string, string> = {}
+    if (params?.period) query.period = params.period
+    if (params?.date_min) query.date_min = params.date_min
+    if (params?.date_max) query.date_max = params.date_max
+    return this.request('reports/top_sellers', { params: query })
+  }
+
+  /**
+   * Orders totals by status (pending, processing, completed, etc.)
+   */
+  async getOrdersTotalsReport(): Promise<Array<{ slug: string; name: string; total: number }>> {
+    return this.request('reports/orders/totals')
+  }
+
+  /**
+   * Products totals by type (simple, variable, etc.)
+   */
+  async getProductsTotalsReport(): Promise<Array<{ slug: string; name: string; total: number }>> {
+    return this.request('reports/products/totals')
+  }
+
+  /**
+   * Customers totals (paying, non_paying)
+   */
+  async getCustomersTotalsReport(): Promise<Array<{ slug: string; name: string; total: number }>> {
+    return this.request('reports/customers/totals')
+  }
+
+  /**
+   * Coupons totals by type
+   */
+  async getCouponsTotalsReport(): Promise<Array<{ slug: string; name: string; total: number }>> {
+    return this.request('reports/coupons/totals')
+  }
+
+  /**
+   * Reviews totals by rating
+   */
+  async getReviewsTotalsReport(): Promise<Array<{ slug: string; name: string; total: number }>> {
+    return this.request('reports/reviews/totals')
+  }
+
+  /**
    * Fetch all pages of a resource (handles pagination automatically)
    */
   async fetchAllPages<T>(
