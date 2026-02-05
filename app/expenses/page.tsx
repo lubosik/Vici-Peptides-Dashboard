@@ -59,9 +59,10 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   }
   let hasError = false
   let errorMessage = ''
+  let grandTotal: { total: number; count: number } = { total: 0, count: 0 }
 
   try {
-    const [expensesResult, categoriesFromDb, expenseSummary, grandTotal] = await Promise.all([
+    const [expensesResult, categoriesFromDb, expenseSummary, grandTotalRes] = await Promise.all([
       getExpenses(supabase, filters, page, 20, sortBy, sortOrder),
       getExpenseCategories(supabase),
       getExpenseSummary(supabase, filters.dateFrom, filters.dateTo, filters),
