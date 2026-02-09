@@ -149,9 +149,18 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                     Import Statement
                   </Link>
                 </Button>
-                <Button variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
+                <Button variant="outline" asChild>
+                  <Link
+                    href={`/api/expenses/export?${new URLSearchParams({
+                      ...(searchParams.category && { category: searchParams.category }),
+                      ...(searchParams.dateFrom && { dateFrom: searchParams.dateFrom }),
+                      ...(searchParams.dateTo && { dateTo: searchParams.dateTo }),
+                      ...(searchParams.search && { search: searchParams.search }),
+                    }).toString()}`}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export CSV
+                  </Link>
                 </Button>
                 <AddExpenseDialog categories={categories} />
               </div>
