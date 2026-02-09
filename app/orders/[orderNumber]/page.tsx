@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getOrderWithLines } from '@/lib/queries/orders'
 import { formatCurrency, formatPercent } from '@/lib/metrics/calculations'
 import Link from 'next/link'
@@ -33,7 +33,7 @@ export async function generateStaticParams() {
 }
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   
   // Decode the order number from URL
   // Handle both sync and async params (Next.js 14+)
@@ -104,8 +104,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 </div>
                 <form action={async (formData) => {
                   'use server'
-                  const { createClient } = await import('@/lib/supabase/server')
-                  const supabase = await createClient()
+                  const { createAdminClient } = await import('@/lib/supabase/admin')
+                  const supabase = createAdminClient()
                   const newStatus = formData.get('status') as string
                   if (!newStatus) return
                   

@@ -206,11 +206,15 @@ export async function createExpense(
     amount: number
     vendor?: string
     notes?: string
+    source?: string
   }
 ) {
   const { data, error } = await supabase
     .from('expenses')
-    .insert(expense)
+    .insert({
+      ...expense,
+      source: expense.source ?? 'manual',
+    })
     .select()
     .single()
 

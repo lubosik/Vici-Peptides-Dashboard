@@ -116,11 +116,12 @@ export default function SettingsPage() {
     }
   }
 
-  const handleResyncShippoExpenses = async () => {
+  const handleResyncShippoExpenses = async (forceAll = false) => {
     setResyncingShippo(true)
     setSyncStatus(null)
     try {
-      const res = await fetch('/api/admin/resync-shippo-expenses', { method: 'POST' })
+      const url = forceAll ? '/api/admin/resync-shippo-expenses?force=true' : '/api/admin/resync-shippo-expenses'
+      const res = await fetch(url, { method: 'POST' })
       const data = await res.json()
       if (res.ok) {
         setSyncStatus({
@@ -274,25 +275,36 @@ export default function SettingsPage() {
                   <div>
                     <p className="text-sm font-medium text-foreground mb-1">Re-sync Shippo expenses (label costs)</p>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Re-fetch actual label costs from Shippo Transactions API and update existing Shippo expenses with correct amounts.
+                      Re-fetch rate.amount from Shippo Transactions API (what you pay per label, not what buyer pays). Updates expenses with wrong amounts.
                     </p>
-                    <Button
-                      onClick={handleResyncShippoExpenses}
-                      disabled={resyncingShippo || syncing || syncingDashboard}
-                      className="flex items-center gap-2"
-                    >
-                      {resyncingShippo ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                          Resyncing...
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="h-4 w-4" />
-                          Re-sync Shippo Expenses
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        onClick={() => handleResyncShippoExpenses(false)}
+                        disabled={resyncingShippo || syncing || syncingDashboard}
+                        className="flex items-center gap-2"
+                      >
+                        {resyncingShippo ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            Resyncing...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4" />
+                            Re-sync Shippo Expenses
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleResyncShippoExpenses(true)}
+                        disabled={resyncingShippo || syncing || syncingDashboard}
+                        className="flex items-center gap-2"
+                        title="Update all 121 expenses with API values (verification pass)"
+                      >
+                        Force Refresh All
+                      </Button>
+                    </div>
                   </div>
 
                   <div>

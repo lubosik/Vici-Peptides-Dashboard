@@ -100,24 +100,34 @@ export default function ExpenseImportPage() {
     }
   }
 
-  const approveAll = async () => {
+  const approveLines = async (lineIdsToApprove: number[] | 'all') => {
     setLoading(true)
     setError(null)
     try {
       const res = await fetch(`/api/expenses/import/${importId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lineIds: 'all' }),
+        body: JSON.stringify({ lineIds: lineIdsToApprove }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Approve failed')
-      fetchImport(importId!)
+      if (!res.ok) {
+        setError(data.error || 'Approve failed')
+        return
+      }
+      const approvedIds = new Set(
+        (data.results || []).filter((r: any) => r.status === 'approved').map((r: any) => r.lineId)
+      )
+      setLines((prev) =>
+        prev.map((l) => (approvedIds.has(l.id) ? { ...l, approved: true } : l))
+      )
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Approve failed')
     } finally {
       setLoading(false)
     }
   }
+
+  const approveAll = () => approveLines('all')
 
   const pending = lines.filter((l) => !l.approved && !l.rejected)
   const approved = lines.filter((l) => l.approved)
@@ -304,10 +314,21 @@ export default function ExpenseImportPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              {line.approved && <Check className="h-4 w-4 text-green-600" />}
-                              {line.rejected && <X className="h-4 w-4 text-red-600" />}
-                              {!line.approved && !line.rejected && (
-                                <span className="text-muted-foreground text-sm">Pending</span>
+                              {line.approved ? (
+                                <Check className="h-4 w-4 text-green-600" />
+                              ) : line.rejected ? (
+                                <X className="h-4 w-4 text-red-600" />
+                              ) : line.category ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => approveLines([line.id])}
+                                  disabled={loading}
+                                >
+                                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                </Button>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">Set category first</span>
                               )}
                             </TableCell>
                           </TableRow>

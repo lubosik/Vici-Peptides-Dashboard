@@ -8,14 +8,18 @@ export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/admin/resync-shippo-expenses
- * Re-fetch actual shipping costs from Shippo Transactions API and update existing Shippo expenses.
+ * Re-fetch actual label costs from Shippo Transactions API (rate.amount per label) and update existing Shippo expenses.
+ * Query: ?force=true to update all 121 even when amount already matches (verification pass).
  */
 export async function POST(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const force = searchParams.get('force') === 'true'
+
     const supabase = createAdminClient()
     const shippoClient = createShippoClient()
 
-    const result = await resyncShippoExpenseAmounts(supabase, shippoClient)
+    const result = await resyncShippoExpenseAmounts(supabase, shippoClient, { force })
 
     revalidatePath('/expenses')
     revalidatePath('/')

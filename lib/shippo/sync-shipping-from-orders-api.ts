@@ -3,8 +3,9 @@
  * Matches Shippo order_number (e.g. "#1068") to our WooCommerce order_number ("Order #1068")
  * and creates/updates a shipping expense for each.
  *
- * Uses Transactions API for ACTUAL label cost (what Shippo charged) when available.
- * Falls back to order.shipping_cost (storefront rate) only when no transactions exist.
+ * Uses ONLY the Retrieve a shipping label API (GET /transactions/{id}) → rate.amount.
+ * That is the ACTUAL cost the client pays to Shippo per label (not what the buyer pays).
+ * order.shipping_cost is the storefront rate (what buyer pays) - we never use it.
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
@@ -25,42 +26,39 @@ function normalizeOrderNumberForMatch(num: string): string {
 }
 
 /**
- * Get actual shipping cost from Shippo.
- * If order has transactions (labels purchased), sum rate.amount from each transaction.
- * Otherwise fall back to order.shipping_cost (storefront rate).
+ * Get actual label cost from Shippo (what the client pays per label).
+ * Uses Retrieve a shipping label API: GET /transactions/{id} → rate.amount.
+ * Sums rate.amount for all transactions on the order.
+ * Never uses order.shipping_cost (that's what the buyer pays).
  */
 async function getActualShippingCost(
   order: any,
   shippoClient: ShippoClient
 ): Promise<number> {
   const transactions = order.transactions
-  if (transactions && Array.isArray(transactions) && transactions.length > 0) {
-    let totalCost = 0
-    for (const txnRef of transactions) {
-      const txnId = typeof txnRef === 'string' ? txnRef : txnRef?.object_id || txnRef
-      if (!txnId) continue
-      try {
-        const txn = await shippoClient.getTransaction(txnId)
-        if (txn.rate) {
-          if (typeof txn.rate === 'object' && txn.rate.amount) {
-            totalCost += parseFloat(txn.rate.amount)
-          } else if (typeof txn.rate === 'string') {
-            const rate = await shippoClient.getRate(txn.rate)
-            totalCost += parseFloat(rate.amount || '0')
-          }
-        }
-      } catch (err) {
-        console.error(`Failed to fetch Shippo transaction ${txnId}:`, err)
-      }
-    }
-    if (totalCost > 0) return totalCost
+  if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
+    return 0
   }
 
-  const fallback = parseFloat(order.shipping_cost || '0')
-  if (fallback > 0) {
-    return fallback
+  let totalCost = 0
+  for (const txnRef of transactions) {
+    const txnId = typeof txnRef === 'string' ? txnRef : txnRef?.object_id || txnRef
+    if (!txnId) continue
+    try {
+      const txn = await shippoClient.getTransaction(txnId)
+      if (txn.rate) {
+        if (typeof txn.rate === 'object' && txn.rate.amount) {
+          totalCost += parseFloat(txn.rate.amount)
+        } else if (typeof txn.rate === 'string') {
+          const rate = await shippoClient.getRate(txn.rate)
+          totalCost += parseFloat(rate.amount || '0')
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to fetch Shippo transaction ${txnId}:`, err)
+    }
   }
-  return 0
+  return totalCost
 }
 
 export interface SyncFromShippoOrdersResult {
@@ -177,7 +175,7 @@ export async function syncShippingCostsFromShippoOrders(
 
         const expenseData = {
           expense_date: expenseDate,
-          category: 'shipping',
+          category: 'Shipping',
           description: `Shipping cost for ${ourOrder.order_number} (${order.shipping_method || 'Shippo'})`,
           vendor: 'Shippo',
           amount: actualCost,
@@ -199,7 +197,7 @@ export async function syncShippingCostsFromShippoOrders(
           .from('expenses')
           .select('expense_id')
           .eq('order_number', ourOrder.order_number)
-          .eq('category', 'shipping')
+          .eq('source', 'shippo')
           .maybeSingle()
 
         // Only sync expenses that are NOT already on the dashboard (insert only, no updates)
@@ -266,12 +264,15 @@ export interface ResyncShippoExpensesResult {
 }
 
 /**
- * Re-sync existing Shippo expenses: fetch actual cost from Transactions API and update amount.
+ * Re-sync existing Shippo expenses: fetch actual label cost from Transactions API (rate.amount) and update amount.
+ * @param force - when true, update every expense with API value regardless of current amount
  */
 export async function resyncShippoExpenseAmounts(
   supabase: SupabaseClient,
-  shippoClient: ShippoClient
+  shippoClient: ShippoClient,
+  options?: { force?: boolean }
 ): Promise<ResyncShippoExpensesResult> {
+  const force = options?.force ?? false
   const details: ResyncShippoExpensesResult['details'] = []
   let updated = 0
   let errors = 0
@@ -305,7 +306,12 @@ export async function resyncShippoExpenseAmounts(
       const actualCost = await getActualShippingCost(order, shippoClient)
       const oldAmount = Number(exp.amount) || 0
 
-      if (Number.isFinite(actualCost) && actualCost > 0 && Math.abs(actualCost - oldAmount) > 0.001) {
+      const shouldUpdate =
+        force
+          ? Number.isFinite(actualCost) && actualCost > 0
+          : Number.isFinite(actualCost) && actualCost > 0 && Math.abs(actualCost - oldAmount) > 0.001
+
+      if (shouldUpdate) {
         const { error: updateErr } = await supabase
           .from('expenses')
           .update({ amount: actualCost })
