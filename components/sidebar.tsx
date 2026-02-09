@@ -28,6 +28,8 @@ const navigation = [
   { name: 'Products', href: '/products', icon: Star },
   { name: 'Orders', href: '/orders', icon: MessageSquare },
   { name: 'Expenses', href: '/expenses', icon: Mail },
+  { name: 'Import Statement', href: '/expenses/import', icon: Mail },
+  { name: 'Expense Rules', href: '/expenses/rules', icon: Mail },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 

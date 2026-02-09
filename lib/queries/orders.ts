@@ -271,7 +271,7 @@ export async function getOrderWithLines(
     }
   }
 
-  // Query line items with the exact order_number from the database
+  // Query line items by order_number first, then fallback to order_id (woo_order_id) if no results
   let { data: lineItems, error: linesError } = await supabase
     .from('order_lines')
     .select(`
@@ -283,11 +283,38 @@ export async function getOrderWithLines(
       line_total,
       line_cost,
       line_profit,
-      woo_line_item_id,
+      order_number,
+      order_id,
       products(product_id, product_name, sku_code)
     `)
     .eq('order_number', actualOrderNumber)
     .order('line_id', { ascending: true })
+
+  // Fallback: if no line items by order_number, try by order_id (WooCommerce ID)
+  if ((!lineItems || lineItems.length === 0) && order.woo_order_id != null) {
+    const { data: byOrderId } = await supabase
+      .from('order_lines')
+      .select(`
+        line_id,
+        product_id,
+        qty_ordered,
+        our_cost_per_unit,
+        customer_paid_per_unit,
+        line_total,
+        line_cost,
+        line_profit,
+        order_number,
+        order_id,
+        products(product_id, product_name, sku_code)
+      `)
+      .eq('order_id', order.woo_order_id)
+      .order('line_id', { ascending: true })
+
+    if (byOrderId && byOrderId.length > 0) {
+      lineItems = byOrderId
+      linesError = null
+    }
+  }
 
   // If no results and we're in dev, try a few fallback queries
   if ((!lineItems || lineItems.length === 0) && process.env.NODE_ENV === 'development') {

@@ -9,7 +9,7 @@ import { getExpenses, getExpenseCategories, getExpenseSummary, getExpenseGrandTo
 import { getExpenseCategoriesFromLists } from '@/lib/utils/expense-categories'
 import { formatCurrency } from '@/lib/metrics/calculations'
 import Link from 'next/link'
-import { Plus, Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Search, Download, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
 import { ExpensesChart } from '@/components/charts/expenses-chart'
 import { AddExpenseDialog } from '@/components/expenses/add-expense-dialog'
 import { DeleteExpenseButton } from '@/components/expenses/delete-expense-button'
@@ -125,6 +125,12 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <SyncShippoShippingButton />
+                <Button variant="outline" asChild>
+                  <Link href="/expenses/import">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import Statement
+                  </Link>
+                </Button>
                 <Button variant="outline">
                   <Download className="mr-2 h-4 w-4" />
                   Export CSV
@@ -291,7 +297,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                           <TableCell>
                             {expense.source ? (
                               <span className="px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
-                                {expense.source === 'shippo' ? 'Shippo' : expense.source}
+                                {expense.source === 'shippo' ? 'Shippo' : expense.source === 'shippo_invoice' ? 'Shippo Invoice' : expense.source === 'shippo_email' ? 'Shippo Email' : expense.source === 'import' ? 'Import' : expense.source || 'Manual'}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">Manual</span>

@@ -171,6 +171,128 @@ export class ShippoClient {
   }
 
   /**
+   * Get single order by object_id (for re-sync)
+   * GET /orders/<id>
+   */
+  async getOrder(orderId: string): Promise<ShippoOrder> {
+    const url = `${this.baseUrl}/orders/${orderId}`
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `ShippoToken ${this.config.apiToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new ShippoError(
+        `Shippo API error: ${response.status} ${response.statusText}`,
+        response.status,
+        data
+      )
+    }
+    return data
+  }
+
+  /**
+   * Get transaction by ID (for actual label cost)
+   * GET /transactions/<id>
+   */
+  async getTransaction(transactionId: string): Promise<{
+    object_id: string
+    rate: { object_id: string; amount: string; currency: string } | string
+    tracking_number?: string
+    status: string
+  }> {
+    const url = `${this.baseUrl}/transactions/${transactionId}`
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `ShippoToken ${this.config.apiToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new ShippoError(
+        `Shippo API error: ${response.status} ${response.statusText}`,
+        response.status,
+        data
+      )
+    }
+    return data
+  }
+
+  /**
+   * Get rate by ID (when transaction.rate is a reference)
+   * GET /rates/<id>
+   */
+  async getRate(rateId: string): Promise<{ object_id: string; amount: string; currency: string }> {
+    const url = `${this.baseUrl}/rates/${rateId}`
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `ShippoToken ${this.config.apiToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new ShippoError(
+        `Shippo API error: ${response.status} ${response.statusText}`,
+        response.status,
+        data
+      )
+    }
+    return data
+  }
+
+  /**
+   * List invoices from Shippo Billing API (beta).
+   * GET /invoices - use status=PAID to get paid invoices.
+   * No Make.com needed - Shippo dashboard config is enough.
+   */
+  async listInvoices(params?: {
+    page?: number
+    results?: number
+    status?: string
+  }): Promise<{
+    next: string | null
+    previous: string | null
+    results: Array<{
+      object_id: string
+      invoice_number: string
+      status: string
+      invoice_paid_date: string | null
+      total_invoiced?: { amount: string; currency: string }
+      total_charged?: { amount: string; currency: string }
+    }>
+  }> {
+    const url = new URL(`${this.baseUrl}/invoices`)
+    if (params?.page != null) url.searchParams.set('page', String(params.page))
+    if (params?.results != null) url.searchParams.set('results', String(params.results))
+    if (params?.status) url.searchParams.set('status', params.status)
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        Authorization: `ShippoToken ${this.config.apiToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const data = await response.json()
+    if (!response.ok) {
+      throw new ShippoError(
+        `Shippo Invoices API error: ${response.status}`,
+        response.status,
+        data
+      )
+    }
+    return data
+  }
+
+  /**
    * Fetch next page of orders using the URL returned in response.next
    */
   async listOrdersNext(nextUrl: string): Promise<ShippoOrdersListResponse> {

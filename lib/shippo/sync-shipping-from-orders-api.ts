@@ -2,6 +2,9 @@
  * Sync shipping costs from Shippo Orders API into expenses
  * Matches Shippo order_number (e.g. "#1068") to our WooCommerce order_number ("Order #1068")
  * and creates/updates a shipping expense for each.
+ *
+ * Uses Transactions API for ACTUAL label cost (what Shippo charged) when available.
+ * Falls back to order.shipping_cost (storefront rate) only when no transactions exist.
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
@@ -14,6 +17,50 @@ export function normalizeShippoOrderNumberForMatch(shippoOrderNumber: string): s
   if (/^Order\s+#/i.test(trimmed)) return trimmed
   if (trimmed.startsWith('#')) return `Order ${trimmed}`
   return `Order #${trimmed}`
+}
+
+/** Extract numeric part for matching: "1068" from "#1068" or "Order #1068" */
+function normalizeOrderNumberForMatch(num: string): string {
+  return num.replace(/^[#\s]*(?:Order\s*#?\s*)?/i, '').trim()
+}
+
+/**
+ * Get actual shipping cost from Shippo.
+ * If order has transactions (labels purchased), sum rate.amount from each transaction.
+ * Otherwise fall back to order.shipping_cost (storefront rate).
+ */
+async function getActualShippingCost(
+  order: any,
+  shippoClient: ShippoClient
+): Promise<number> {
+  const transactions = order.transactions
+  if (transactions && Array.isArray(transactions) && transactions.length > 0) {
+    let totalCost = 0
+    for (const txnRef of transactions) {
+      const txnId = typeof txnRef === 'string' ? txnRef : txnRef?.object_id || txnRef
+      if (!txnId) continue
+      try {
+        const txn = await shippoClient.getTransaction(txnId)
+        if (txn.rate) {
+          if (typeof txn.rate === 'object' && txn.rate.amount) {
+            totalCost += parseFloat(txn.rate.amount)
+          } else if (typeof txn.rate === 'string') {
+            const rate = await shippoClient.getRate(txn.rate)
+            totalCost += parseFloat(rate.amount || '0')
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to fetch Shippo transaction ${txnId}:`, err)
+      }
+    }
+    if (totalCost > 0) return totalCost
+  }
+
+  const fallback = parseFloat(order.shipping_cost || '0')
+  if (fallback > 0) {
+    return fallback
+  }
+  return 0
 }
 
 export interface SyncFromShippoOrdersResult {
@@ -73,21 +120,25 @@ export async function syncShippingCostsFromShippoOrders(
         continue
       }
 
-      const shippingCost = parseFloat(order.shipping_cost || '0')
-      if (!Number.isFinite(shippingCost) || shippingCost <= 0) {
-        skipped++
-        details.push({ shippoOrderNumber, ourOrderNumber: null, action: 'skipped' })
-        continue
-      }
-
       const ourOrderNumber = normalizeShippoOrderNumberForMatch(shippoOrderNumber)
+      const shippoNumNormalized = normalizeOrderNumberForMatch(shippoOrderNumber)
 
       try {
-        const { data: ourOrder, error: orderError } = await supabase
+        let { data: ourOrder, error: orderError } = await supabase
           .from('orders')
           .select('order_number, woo_order_id, order_date')
           .eq('order_number', ourOrderNumber)
           .maybeSingle()
+
+        if (!ourOrder && shippoNumNormalized) {
+          const { data: byNumber } = await supabase
+            .from('orders')
+            .select('order_number, woo_order_id, order_date')
+            .ilike('order_number', `%${shippoNumNormalized}%`)
+            .limit(1)
+            .maybeSingle()
+          ourOrder = byNumber
+        }
 
         if (orderError) {
           errors++
@@ -106,6 +157,18 @@ export async function syncShippingCostsFromShippoOrders(
           continue
         }
 
+        const actualCost = await getActualShippingCost(order, shippoClient)
+        if (!Number.isFinite(actualCost) || actualCost <= 0) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(
+              `Shippo order ${order.order_number}: shipping_cost=${order.shipping_cost}, transactions=${JSON.stringify(order.transactions)}, actualCost=${actualCost}`
+            )
+          }
+          skipped++
+          details.push({ shippoOrderNumber, ourOrderNumber: ourOrder.order_number, action: 'skipped' })
+          continue
+        }
+
         const expenseDate = order.placed_at
           ? new Date(order.placed_at).toISOString().split('T')[0]
           : ourOrder.order_date
@@ -117,7 +180,7 @@ export async function syncShippingCostsFromShippoOrders(
           category: 'shipping',
           description: `Shipping cost for ${ourOrder.order_number} (${order.shipping_method || 'Shippo'})`,
           vendor: 'Shippo',
-          amount: shippingCost,
+          amount: actualCost,
           order_id: ourOrder.woo_order_id ?? null,
           order_number: ourOrder.order_number,
           source: 'shippo',
@@ -193,4 +256,94 @@ export async function syncShippingCostsFromShippoOrders(
     errors,
     details,
   }
+}
+
+export interface ResyncShippoExpensesResult {
+  success: boolean
+  updated: number
+  errors: number
+  details: Array<{ expense_id: number; order_number: string; old_amount: number; new_amount: number; status: 'updated' | 'error'; error?: string }>
+}
+
+/**
+ * Re-sync existing Shippo expenses: fetch actual cost from Transactions API and update amount.
+ */
+export async function resyncShippoExpenseAmounts(
+  supabase: SupabaseClient,
+  shippoClient: ShippoClient
+): Promise<ResyncShippoExpensesResult> {
+  const details: ResyncShippoExpensesResult['details'] = []
+  let updated = 0
+  let errors = 0
+
+  const { data: expenses, error } = await supabase
+    .from('expenses')
+    .select('expense_id, order_number, amount, external_ref')
+    .eq('source', 'shippo')
+
+  if (error || !expenses?.length) {
+    return { success: !error, updated: 0, errors: error ? 1 : 0, details: [] }
+  }
+
+  for (const exp of expenses) {
+    const shippoOrderId = exp.external_ref
+    if (!shippoOrderId) {
+      details.push({
+        expense_id: exp.expense_id,
+        order_number: exp.order_number || '',
+        old_amount: Number(exp.amount) || 0,
+        new_amount: 0,
+        status: 'error',
+        error: 'No external_ref (Shippo order ID)',
+      })
+      errors++
+      continue
+    }
+
+    try {
+      const order = await shippoClient.getOrder(shippoOrderId)
+      const actualCost = await getActualShippingCost(order, shippoClient)
+      const oldAmount = Number(exp.amount) || 0
+
+      if (Number.isFinite(actualCost) && actualCost > 0 && Math.abs(actualCost - oldAmount) > 0.001) {
+        const { error: updateErr } = await supabase
+          .from('expenses')
+          .update({ amount: actualCost })
+          .eq('expense_id', exp.expense_id)
+
+        if (updateErr) {
+          details.push({
+            expense_id: exp.expense_id,
+            order_number: exp.order_number || '',
+            old_amount: oldAmount,
+            new_amount: actualCost,
+            status: 'error',
+            error: updateErr.message,
+          })
+          errors++
+        } else {
+          updated++
+          details.push({
+            expense_id: exp.expense_id,
+            order_number: exp.order_number || '',
+            old_amount: oldAmount,
+            new_amount: actualCost,
+            status: 'updated',
+          })
+        }
+      }
+    } catch (err) {
+      details.push({
+        expense_id: exp.expense_id,
+        order_number: exp.order_number || '',
+        old_amount: Number(exp.amount) || 0,
+        new_amount: 0,
+        status: 'error',
+        error: err instanceof Error ? err.message : 'Unknown error',
+      })
+      errors++
+    }
+  }
+
+  return { success: errors === 0, updated, errors, details }
 }

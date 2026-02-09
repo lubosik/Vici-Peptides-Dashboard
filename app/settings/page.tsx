@@ -16,6 +16,9 @@ export default function SettingsPage() {
   const router = useRouter()
   const [syncing, setSyncing] = useState(false)
   const [syncingDashboard, setSyncingDashboard] = useState(false)
+  const [resyncingShippo, setResyncingShippo] = useState(false)
+  const [syncingInvoices, setSyncingInvoices] = useState(false)
+  const [backfillingCosts, setBackfillingCosts] = useState(false)
   const [syncStatus, setSyncStatus] = useState<{ success: boolean; message: string } | null>(null)
 
   const handleSyncWholeDashboard = async () => {
@@ -85,6 +88,79 @@ export default function SettingsPage() {
       })
     } finally {
       setSyncing(false)
+    }
+  }
+
+  const handleSyncShippoInvoices = async () => {
+    setSyncingInvoices(true)
+    setSyncStatus(null)
+    try {
+      const res = await fetch('/api/admin/sync-shippo-invoices', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        setSyncStatus({
+          success: true,
+          message:
+            data.created > 0
+              ? `Created ${data.created} expense(s) from Shippo invoices.`
+              : data.message || 'Shippo invoices synced.',
+        })
+        setTimeout(() => router.refresh(), 2000)
+      } else {
+        setSyncStatus({ success: false, message: data.error || 'Failed to sync Shippo invoices' })
+      }
+    } catch (e) {
+      setSyncStatus({ success: false, message: 'An error occurred while syncing Shippo invoices' })
+    } finally {
+      setSyncingInvoices(false)
+    }
+  }
+
+  const handleResyncShippoExpenses = async () => {
+    setResyncingShippo(true)
+    setSyncStatus(null)
+    try {
+      const res = await fetch('/api/admin/resync-shippo-expenses', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        setSyncStatus({
+          success: true,
+          message: data.updated
+            ? `Updated ${data.updated} Shippo expense amounts from Transactions API.`
+            : data.message || 'Shippo expenses resynced.',
+        })
+        setTimeout(() => router.refresh(), 2000)
+      } else {
+        setSyncStatus({ success: false, message: data.error || 'Failed to resync Shippo expenses' })
+      }
+    } catch (e) {
+      setSyncStatus({ success: false, message: 'An error occurred while resyncing Shippo expenses' })
+    } finally {
+      setResyncingShippo(false)
+    }
+  }
+
+  const handleBackfillLineItemCosts = async () => {
+    setBackfillingCosts(true)
+    setSyncStatus(null)
+    try {
+      const res = await fetch('/api/admin/backfill-line-item-costs', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        setSyncStatus({
+          success: true,
+          message: data.updated
+            ? `Backfilled ${data.updated} line items with product costs.`
+            : data.message || 'Line item costs backfilled.',
+        })
+        setTimeout(() => router.refresh(), 2000)
+      } else {
+        setSyncStatus({ success: false, message: data.error || 'Failed to backfill line item costs' })
+      }
+    } catch (e) {
+      setSyncStatus({ success: false, message: 'An error occurred while backfilling costs' })
+    } finally {
+      setBackfillingCosts(false)
     }
   }
 
@@ -166,6 +242,78 @@ export default function SettingsPage() {
                         <>
                           <RefreshCw className="h-4 w-4" />
                           Sync Line Items from WooCommerce
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">Sync Shippo invoices (recommended)</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Pull PAID invoices from Shippo Invoices API into expenses. No Make.com needed.
+                    </p>
+                    <Button
+                      onClick={handleSyncShippoInvoices}
+                      disabled={syncingInvoices || syncing || syncingDashboard}
+                      className="flex items-center gap-2"
+                    >
+                      {syncingInvoices ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4" />
+                          Sync Shippo Invoices
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">Re-sync Shippo expenses (label costs)</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Re-fetch actual label costs from Shippo Transactions API and update existing Shippo expenses with correct amounts.
+                    </p>
+                    <Button
+                      onClick={handleResyncShippoExpenses}
+                      disabled={resyncingShippo || syncing || syncingDashboard}
+                      className="flex items-center gap-2"
+                    >
+                      {resyncingShippo ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Resyncing...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4" />
+                          Re-sync Shippo Expenses
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">Backfill line item costs</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      For line items with 0 cost, copy our_cost from the products table. DB triggers will recompute margins and profit.
+                    </p>
+                    <Button
+                      onClick={handleBackfillLineItemCosts}
+                      disabled={backfillingCosts || syncing || syncingDashboard}
+                      className="flex items-center gap-2"
+                    >
+                      {backfillingCosts ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Backfilling...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4" />
+                          Backfill Line Item Costs
                         </>
                       )}
                     </Button>

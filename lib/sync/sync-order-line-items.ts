@@ -7,6 +7,31 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WooCommerceClient } from '@/lib/sync/woocommerce-client'
 
+/** Get cost from WooCommerce line item meta_data */
+function getCostFromMeta(lineItem: any): number | null {
+  if (lineItem?.meta_data && Array.isArray(lineItem.meta_data)) {
+    for (const meta of lineItem.meta_data) {
+      const key = (meta?.key || '').toLowerCase()
+      if (['our_cost', '_our_cost', 'cost_price', '_cost', 'cost'].includes(key)) {
+        const val = parseFloat(meta?.value)
+        if (!isNaN(val) && val > 0) return val
+      }
+    }
+  }
+  return null
+}
+
+/** Get product cost from products table */
+async function getProductCost(supabase: SupabaseClient, productId: number): Promise<number> {
+  const { data } = await supabase
+    .from('products')
+    .select('our_cost')
+    .eq('product_id', productId)
+    .maybeSingle()
+  const cost = data?.our_cost
+  return cost != null && !isNaN(Number(cost)) ? Number(cost) : 0
+}
+
 async function ensureProduct(
   supabase: SupabaseClient,
   wooProductId: number,
@@ -105,6 +130,9 @@ export async function syncOrderLineItemsFromWoo(
 
     const qty = parseInt(String(item.quantity || '1'), 10) || 1
     const unitPrice = parseFloat(String(item.price || '0')) || 0
+    const costFromMeta = getCostFromMeta(item)
+    const ourCostPerUnit = costFromMeta ?? (await getProductCost(supabase, productId))
+
     const lineItemData = {
       order_id: wooOrder.id,
       id: item.id,
@@ -124,7 +152,7 @@ export async function syncOrderLineItemsFromWoo(
       raw_json: item,
       qty_ordered: qty,
       customer_paid_per_unit: unitPrice,
-      our_cost_per_unit: 0,
+      our_cost_per_unit: ourCostPerUnit,
     }
 
     const { error: upsertError } = await supabase
