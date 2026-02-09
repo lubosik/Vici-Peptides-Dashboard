@@ -65,10 +65,10 @@ export async function syncShippoInvoicesFromApi(
         amount,
         source: 'shippo_invoice',
         external_ref: externalRef,
-        metadata: JSON.stringify({
+        metadata: {
           invoice_number: invoiceNumber,
           shippo_object_id: inv.object_id,
-        }),
+        },
       })
 
       if (error) {

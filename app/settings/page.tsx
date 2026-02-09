@@ -62,29 +62,59 @@ export default function SettingsPage() {
   const handleSyncLineItems = async () => {
     setSyncing(true)
     setSyncStatus(null)
+    const MAX_BATCHES = 20
+    let totalSynced = 0
+    let totalErrors = 0
+    let batchCount = 0
     try {
-      const response = await fetch('/api/settings/sync-line-items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      })
-      const data = await response.json()
-      if (response.ok) {
+      for (let i = 0; i < MAX_BATCHES; i++) {
+        const response = await fetch('/api/settings/sync-line-items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        if (response.status === 504) {
+          setSyncStatus({
+            success: false,
+            message: 'Request timed out. You can click again to sync more.',
+          })
+          break
+        }
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          setSyncStatus({
+            success: false,
+            message: data.error || 'Failed to sync line items',
+          })
+          break
+        }
+        totalSynced += data.synced ?? 0
+        totalErrors += data.errors ?? 0
+        batchCount++
+        if (!data.hasMore) {
+          setSyncStatus({
+            success: true,
+            message: `Synced line items for ${totalSynced} orders.${totalErrors > 0 ? ` ${totalErrors} errors.` : ''}${data.message ? ` ${data.message}` : ''}`,
+          })
+          setTimeout(() => router.refresh(), 2000)
+          break
+        }
         setSyncStatus({
           success: true,
-          message: `Synced line items for ${data.synced ?? 0} orders.${data.errors > 0 ? ` ${data.errors} errors.` : ''}${data.message ? ` ${data.message}` : ''}`,
+          message: `Syncing... ${totalSynced} orders so far (batch ${batchCount})`,
+        })
+      }
+      if (batchCount >= MAX_BATCHES && totalSynced > 0) {
+        setSyncStatus({
+          success: true,
+          message: `Synced ${totalSynced} orders (max batches reached). Click again to sync more if needed.`,
         })
         setTimeout(() => router.refresh(), 2000)
-      } else {
-        setSyncStatus({
-          success: false,
-          message: data.error || 'Failed to sync line items',
-        })
       }
     } catch (error) {
       setSyncStatus({
         success: false,
-        message: 'An error occurred while syncing line items',
+        message: 'Network error. Check your connection and try again.',
       })
     } finally {
       setSyncing(false)
@@ -107,10 +137,16 @@ export default function SettingsPage() {
         })
         setTimeout(() => router.refresh(), 2000)
       } else {
-        setSyncStatus({ success: false, message: data.error || 'Failed to sync Shippo invoices' })
+        setSyncStatus({
+          success: false,
+          message: data.error || data.message || 'Failed to sync Shippo invoices',
+        })
       }
     } catch (e) {
-      setSyncStatus({ success: false, message: 'An error occurred while syncing Shippo invoices' })
+      setSyncStatus({
+        success: false,
+        message: 'Network error. Check your connection and try again.',
+      })
     } finally {
       setSyncingInvoices(false)
     }
