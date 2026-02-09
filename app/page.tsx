@@ -2,7 +2,7 @@ import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
 import { DashboardContent } from '@/components/dashboard/dashboard-content'
 import { DashboardClient } from '@/components/dashboard/dashboard-client'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getDashboardKPIs, getTopProducts, type TopProductsDateRange } from '@/lib/metrics/queries'
 import { getRevenueOverTime } from '@/lib/metrics/queries'
 import { getNetProfitOverTime } from '@/lib/metrics/net-profit'
@@ -16,7 +16,7 @@ interface DashboardPageProps {
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const params = await searchParams
   const topRange = (params.topRange || 'all') as TopProductsDateRange
   const topFrom = params.topFrom

@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getExpenses, getExpenseCategories, getExpenseSummary, getExpenseGrandTotal } from '@/lib/queries/expenses'
 import { getExpenseCategoriesFromLists } from '@/lib/utils/expense-categories'
 import { formatCurrency } from '@/lib/metrics/calculations'
@@ -31,8 +31,26 @@ interface ExpensesPageProps {
 }
 
 export default async function ExpensesPage({ searchParams }: ExpensesPageProps) {
-  const supabase = await createClient()
-  
+  let supabase
+  try {
+    supabase = createAdminClient()
+  } catch (e) {
+    console.error('Supabase init error:', e)
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+            <p className="font-medium text-destructive">Unable to connect to database</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {e instanceof Error ? e.message : 'Missing Supabase configuration. Check NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel/env.'}
+            </p>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   const page = parseInt(searchParams.page || '1')
   const filters = {
     category: searchParams.category,
