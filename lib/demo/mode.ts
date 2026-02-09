@@ -1,5 +1,6 @@
 /**
- * Demo mode utility - checks if we're running in demo mode
+ * Demo mode utility - checks if we're running in demo mode.
+ * Default is production (false): only enable when NEXT_PUBLIC_DEMO_MODE is explicitly 'true'.
  */
 
 export const isDemoMode = () => {
@@ -10,9 +11,8 @@ export const isDemoMode = () => {
       return stored === 'true'
     }
   }
-  
-  // Check environment variable (defaults to true for demo build)
-  return process.env.NEXT_PUBLIC_DEMO_MODE !== 'false'
+  // Production by default: only demo when explicitly set to 'true'
+  return process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 }
 
 export const setDemoMode = (enabled: boolean) => {

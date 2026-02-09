@@ -44,31 +44,27 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
     }
 
     try {
+      // Always persist to Supabase so expense appears in list and dashboard totals
       if (isDemoMode()) {
-        // Demo mode: use local store
         demoStore.addExpense(expense)
-        setOpen(false)
-        router.refresh()
-      } else {
-        // Production mode: call API — wait for full response before closing/navigating
-        const response = await fetch('/api/expenses', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(expense),
-        })
-
-        const data = await response.json().catch(() => ({}))
-        if (!response.ok) {
-          throw new Error((data && data.error) || 'Failed to create expense')
-        }
-
-        setOpen(false)
-        // Navigate to page 1 so the new expense (at top of list) is visible
-        const params = new URLSearchParams({ page: '1' })
-        params.set('r', String(Date.now()))
-        router.push(`/expenses?${params.toString()}`)
-        router.refresh()
       }
+      const response = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expense),
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error((data && data.error) || 'Failed to create expense')
+      }
+
+      setOpen(false)
+      // Navigate to page 1 so the new expense (at top of list) is visible; cache-bust so fresh data
+      const params = new URLSearchParams({ page: '1' })
+      params.set('r', String(Date.now()))
+      router.push(`/expenses?${params.toString()}`)
+      router.refresh()
     } catch (error) {
       console.error('Error creating expense:', error)
       alert(error instanceof Error ? error.message : 'Failed to create expense')
