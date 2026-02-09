@@ -46,25 +46,45 @@ export async function POST(
         continue
       }
 
+      const expensePayload = {
+        expense_date: expenseDate,
+        category: line.category,
+        description: line.description || 'Imported expense',
+        vendor: line.vendor || 'Unknown',
+        amount: Number(line.amount) || amount,
+        source: 'import',
+        external_ref: `import_${importId}_line_${line.id}`,
+      }
+
+      console.log('=== APPROVAL DEBUG ===')
+      console.log('Line to approve:', JSON.stringify(line, null, 2))
+      console.log('Expense payload:', JSON.stringify(expensePayload, null, 2))
+      console.log('Amount type:', typeof expensePayload.amount, 'Value:', expensePayload.amount)
+      console.log('Date value:', expensePayload.expense_date, 'Type:', typeof expensePayload.expense_date)
+
       const { data: expense, error } = await supabase
         .from('expenses')
-        .insert({
-          expense_date: expenseDate,
-          category: line.category,
-          description: line.description || 'Imported expense',
-          vendor: line.vendor || 'Unknown',
-          amount,
-          source: 'import',
-          external_ref: `import_${importId}_line_${line.id}`,
-        })
+        .insert(expensePayload)
         .select()
         .single()
 
       if (error) {
-        console.error(`Approval insert error for line ${line.id}:`, JSON.stringify(error, null, 2))
-        results.push({ lineId: line.id, status: 'error', error: error.message })
-        continue
+        console.error('=== EXPENSE INSERT FAILED ===')
+        console.error('Error code:', error.code)
+        console.error('Error message:', error.message)
+        console.error('Error details:', error.details)
+        console.error('Error hint:', error.hint)
+        return NextResponse.json(
+          {
+            error: 'Failed to create expense',
+            details: error.message,
+            code: error.code,
+          },
+          { status: 500 }
+        )
       }
+
+      console.log('=== EXPENSE CREATED ===', expense)
 
       const { error: updateErr } = await supabase
         .from('expense_import_lines')

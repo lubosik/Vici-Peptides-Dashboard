@@ -12,7 +12,7 @@ function getCostFromMeta(lineItem: any): number | null {
   if (lineItem?.meta_data && Array.isArray(lineItem.meta_data)) {
     for (const meta of lineItem.meta_data) {
       const key = (meta?.key || '').toLowerCase()
-      if (['our_cost', '_our_cost', 'cost_price', '_cost', 'cost'].includes(key)) {
+      if (['our_cost', '_our_cost', 'cost_price', '_cost', 'cost', '_wc_cog_item_cost'].includes(key)) {
         const val = parseFloat(meta?.value)
         if (!isNaN(val) && val > 0) return val
       }
@@ -103,6 +103,9 @@ export async function syncOrderLineItemsFromWoo(
     return { success: true, order_number: orderNumber, line_items_synced: 0, error: 'Order has no WooCommerce ID' }
   }
 
+  console.log(`[LINE SYNC] order_number value: "${orderNumber}" (type: ${typeof orderNumber})`)
+  console.log(`[LINE SYNC] Starting sync for order ${orderNumber} (Woo ID: ${wooOrderId})`)
+
   const storeUrl = process.env.WOOCOMMERCE_STORE_URL
   const consumerKey = process.env.WOOCOMMERCE_CONSUMER_KEY
   const consumerSecret = process.env.WOOCOMMERCE_CONSUMER_SECRET
@@ -119,19 +122,32 @@ export async function syncOrderLineItemsFromWoo(
   }
 
   if (!wooOrder?.line_items || !Array.isArray(wooOrder.line_items) || wooOrder.line_items.length === 0) {
+    console.log(`[LINE SYNC] No line items in WooCommerce order ${wooOrderId}`)
     return { success: true, order_number: orderNumber, line_items_synced: 0 }
   }
 
+  console.log(`[LINE SYNC] Found ${wooOrder.line_items.length} line items`)
   let lineItemsSynced = 0
+
   for (const item of wooOrder.line_items) {
+    // WooCommerce: item.price is NUMBER, item.total is STRING
+    const qty = parseInt(String(item.quantity || '1'), 10) || 1
+    const customerPaidPerUnit =
+      typeof item.price === 'number' ? item.price : parseFloat(String(item.price)) || 0
+    const lineTotal = parseFloat(item.total) || 0
+    const costFromMeta = getCostFromMeta(item)
     const wooProductId = Number(item.product_id) || 0
     const productId = await ensureProduct(supabase, wooProductId, item.name || '', item.price ?? '0')
-    if (productId <= 0) continue
+    const ourCostPerUnit =
+      costFromMeta ?? (productId > 0 ? await getProductCost(supabase, productId) : 0)
+    const lineCost = ourCostPerUnit * qty
+    const lineProfit = lineTotal - lineCost
 
-    const qty = parseInt(String(item.quantity || '1'), 10) || 1
-    const unitPrice = parseFloat(String(item.price || '0')) || 0
-    const costFromMeta = getCostFromMeta(item)
-    const ourCostPerUnit = costFromMeta ?? (await getProductCost(supabase, productId))
+    console.log(
+      `[LINE SYNC] Item: ${item.name} | qty=${qty} | unitPrice=${customerPaidPerUnit} | total=${lineTotal} | cost=${ourCostPerUnit}`
+    )
+
+    if (productId <= 0) continue
 
     const lineItemData = {
       order_id: wooOrder.id,
@@ -141,25 +157,60 @@ export async function syncOrderLineItemsFromWoo(
       variation_id: item.variation_id || null,
       name: item.name || '',
       tax_class: item.tax_class || null,
-      subtotal: String(item.subtotal || '0'),
-      subtotal_tax: String(item.subtotal_tax || '0'),
-      total: String(item.total || '0'),
-      total_tax: String(item.total_tax || '0'),
+      subtotal: String(item.subtotal ?? '0'),
+      subtotal_tax: String(item.subtotal_tax ?? '0'),
+      total: String(item.total ?? '0'),
+      total_tax: String(item.total_tax ?? '0'),
       sku: item.sku || null,
       price: String(item.price ?? '0'),
       taxes: item.taxes || null,
       meta_data: item.meta_data || null,
       raw_json: item,
       qty_ordered: qty,
-      customer_paid_per_unit: unitPrice,
+      customer_paid_per_unit: customerPaidPerUnit,
       our_cost_per_unit: ourCostPerUnit,
+      line_total: lineTotal,
+      line_cost: lineCost,
+      line_profit: lineProfit,
     }
 
     const { error: upsertError } = await supabase
       .from('order_lines')
       .upsert(lineItemData, { onConflict: 'order_id,id', ignoreDuplicates: false })
-    if (!upsertError) lineItemsSynced++
+
+    if (upsertError) {
+      console.error(
+        `[LINE SYNC] Upsert failed for item ${item.id}:`,
+        upsertError.message,
+        upsertError.code,
+        upsertError.details
+      )
+      if (
+        upsertError.code === '42P10' ||
+        String(upsertError.message).includes('could not determine')
+      ) {
+        const { data: existing } = await supabase
+          .from('order_lines')
+          .select('*')
+          .match({ order_id: wooOrder.id, id: item.id })
+          .maybeSingle()
+        if (existing) {
+          const { error: upErr } = await supabase
+            .from('order_lines')
+            .update(lineItemData)
+            .match({ order_id: wooOrder.id, id: item.id })
+          if (!upErr) lineItemsSynced++
+        } else {
+          const { error: inErr } = await supabase.from('order_lines').insert(lineItemData)
+          if (!inErr) lineItemsSynced++
+          else console.error('[LINE SYNC] Insert failed:', inErr.message, JSON.stringify(lineItemData))
+        }
+      }
+    } else {
+      lineItemsSynced++
+    }
   }
 
+  console.log(`[LINE SYNC] Done. Synced ${lineItemsSynced}/${wooOrder.line_items.length}`)
   return { success: true, order_number: orderNumber, line_items_synced: lineItemsSynced }
 }

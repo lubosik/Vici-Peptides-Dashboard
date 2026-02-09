@@ -111,7 +111,9 @@ export default function ExpenseImportPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Approve failed')
+        const msg = data.error || data.details || 'Approve failed'
+        setError(msg)
+        alert('Approval failed: ' + msg)
         return
       }
       const approvedIds = new Set(
@@ -120,8 +122,13 @@ export default function ExpenseImportPage() {
       setLines((prev) =>
         prev.map((l) => (approvedIds.has(l.id) ? { ...l, approved: true } : l))
       )
+      if (lineIdsToApprove === 'all' && approvedIds.size > 0) {
+        alert(`Approved ${approvedIds.size} expense(s)`)
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Approve failed')
+      const msg = e instanceof Error ? e.message : 'Approve failed'
+      setError(msg)
+      alert('Network error. Check your connection and try again.')
     } finally {
       setLoading(false)
     }

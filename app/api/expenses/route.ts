@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createExpense, updateExpense, deleteExpense } from '@/lib/queries/expenses'
+import { updateExpense, deleteExpense } from '@/lib/queries/expenses'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
     }
     const category = (body.category && String(body.category).trim()) || 'Uncategorized'
 
-    // Validate amount
-    const amount = Number(body.amount)
+    // Validate amount - MUST be number for NUMERIC column
+    const amount = Number(body.amount) || parseFloat(body.amount) || 0
     if (isNaN(amount) || amount <= 0) {
       return NextResponse.json(
         { error: 'Amount must be a positive number' },
@@ -66,14 +66,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const expense = await createExpense(supabase, {
+    const insertPayload = {
       expense_date: body.expense_date,
       category,
       description: body.description,
-      amount: amount,
+      amount,
       vendor: body.vendor || null,
       notes: body.notes || null,
-    })
+      source: 'manual',
+    }
+
+    const { data: expense, error } = await supabase
+      .from('expenses')
+      .insert(insertPayload)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('INSERT EXPENSE FAILED:', error.message, error.details, error.hint)
+      return NextResponse.json(
+        { error: error.message, code: error.code, details: error.details },
+        { status: 500 }
+      )
+    }
 
     revalidatePath('/expenses')
     revalidatePath('/')
@@ -83,10 +98,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating expense:', error)
     const errorMessage = error instanceof Error ? error.message : 'Failed to create expense'
     return NextResponse.json(
-      { 
-        error: errorMessage,
-        details: error instanceof Error ? error.stack : undefined
-      },
+      { error: errorMessage, details: error instanceof Error ? error.stack : undefined },
       { status: 500 }
     )
   }
