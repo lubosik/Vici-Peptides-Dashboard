@@ -6,7 +6,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 
 function getDateRange(period: string): { dateFrom: string; dateTo: string } {
   const now = new Date()
-  const dateTo = now.toISOString().split('T')[0]
+  let dateTo = now.toISOString().split('T')[0]
   let dateFrom: string
 
   switch (period) {
