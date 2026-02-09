@@ -56,8 +56,11 @@ export async function getExpenses(
     query = query.or(`description.ilike.%${filters.search}%,vendor.ilike.%${filters.search}%`)
   }
 
-  // Apply sorting
+  // Apply sorting: newest first (by date, then by id so most recently created is at top)
   query = query.order(sortBy, { ascending: sortOrder === 'asc' })
+  if (sortBy === 'expense_date') {
+    query = query.order('expense_id', { ascending: false })
+  }
 
   // Apply pagination
   const from = (page - 1) * pageSize

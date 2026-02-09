@@ -50,22 +50,23 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
         setOpen(false)
         router.refresh()
       } else {
-        // Production mode: call API
+        // Production mode: call API — wait for full response before closing/navigating
         const response = await fetch('/api/expenses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(expense),
         })
 
+        const data = await response.json().catch(() => ({}))
         if (!response.ok) {
-          const err = await response.json()
-          throw new Error(err.error || 'Failed to create expense')
+          throw new Error((data && data.error) || 'Failed to create expense')
         }
 
         setOpen(false)
-        // Invalidate cache then navigate so the new expense and totals show
-        router.refresh()
-        router.push('/expenses?r=' + Date.now())
+        // Navigate to page 1 so the new expense (at top of list) is visible
+        const params = new URLSearchParams({ page: '1' })
+        params.set('r', String(Date.now()))
+        router.push(`/expenses?${params.toString()}`)
         router.refresh()
       }
     } catch (error) {
