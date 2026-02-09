@@ -5,6 +5,8 @@ import { createShippoClient } from '@/lib/shippo/client'
 import { syncShippoInvoicesFromApi } from '@/lib/shippo/sync-shippo-invoices'
 
 export const dynamic = 'force-dynamic'
+// Keep the connection open long enough for all Shippo + Supabase requests to complete (Vercel)
+export const maxDuration = 60
 
 /**
  * POST /api/admin/sync-shippo-invoices
@@ -38,10 +40,11 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error syncing Shippo invoices:', error)
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
       {
         error: 'Failed to sync Shippo invoices',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message,
       },
       { status: 500 }
     )

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { updateExpense, deleteExpense } from '@/lib/queries/expenses'
+import { updateExpense } from '@/lib/queries/expenses'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -46,7 +46,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = createAdminClient()
-    const body = await request.json()
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON body' },
+        { status: 400 }
+      )
+    }
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json(
+        { error: 'Request body must be a JSON object' },
+        { status: 400 }
+      )
+    }
 
     // Validate required fields; treat empty category as "Uncategorized"
     if (!body.expense_date || !body.description || body.amount == null) {
@@ -58,7 +72,7 @@ export async function POST(request: NextRequest) {
     const category = (body.category && String(body.category).trim()) || 'Uncategorized'
 
     // Validate amount - MUST be number for NUMERIC column
-    const amount = Number(body.amount) || parseFloat(body.amount) || 0
+    const amount = Number(body.amount) ?? parseFloat(String(body.amount)) ?? 0
     if (isNaN(amount) || amount <= 0) {
       return NextResponse.json(
         { error: 'Amount must be a positive number' },
@@ -67,12 +81,12 @@ export async function POST(request: NextRequest) {
     }
 
     const insertPayload = {
-      expense_date: body.expense_date,
+      expense_date: String(body.expense_date).trim(),
       category,
-      description: body.description,
+      description: String(body.description).trim(),
       amount,
-      vendor: body.vendor || null,
-      notes: body.notes || null,
+      vendor: body.vendor != null ? String(body.vendor).trim() || null : null,
+      notes: body.notes != null ? String(body.notes).trim() || null : null,
       source: 'manual',
     }
 
@@ -98,7 +112,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating expense:', error)
     const errorMessage = error instanceof Error ? error.message : 'Failed to create expense'
     return NextResponse.json(
-      { error: errorMessage, details: error instanceof Error ? error.stack : undefined },
+      { error: errorMessage },
       { status: 500 }
     )
   }
@@ -137,13 +151,35 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'expense_id is required' }, { status: 400 })
     }
 
-    await deleteExpense(supabase, parseInt(expense_id))
+    const id = parseInt(expense_id, 10)
+    if (isNaN(id)) {
+      return NextResponse.json({ error: 'Invalid expense_id' }, { status: 400 })
+    }
+
+    // Unlink any import lines that reference this expense so the delete can succeed
+    await supabase
+      .from('expense_import_lines')
+      .update({ expense_id: null })
+      .eq('expense_id', id)
+
+    const { error } = await supabase.from('expenses').delete().eq('expense_id', id)
+
+    if (error) {
+      console.error('Delete expense failed:', error.code, error.message, error.details)
+      const message =
+        error.code === '23503'
+          ? 'Cannot delete: this expense is linked elsewhere.'
+          : error.message || 'Failed to delete expense'
+      return NextResponse.json({ error: message, code: error.code }, { status: 500 })
+    }
+
+    revalidatePath('/expenses')
+    revalidatePath('/')
+    revalidatePath('/analytics')
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting expense:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete expense' },
-      { status: 500 }
-    )
+    const message = error instanceof Error ? error.message : 'Failed to delete expense'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
