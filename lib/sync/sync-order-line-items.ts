@@ -162,7 +162,6 @@ export async function syncOrderLineItemsFromWoo(
       tax_class: item.tax_class || null,
       subtotal: String(item.subtotal ?? '0'),
       subtotal_tax: String(item.subtotal_tax ?? '0'),
-      total: String(item.total ?? '0'),
       total_tax: String(item.total_tax ?? '0'),
       sku: item.sku || null,
       price: String(item.price ?? '0'),
@@ -253,7 +252,8 @@ export async function syncOrderLineItemsFromWooOrder(
 
     if (productId <= 0) continue
 
-    const lineItemData = {
+    // Use only columns that exist: order_lines has line_total (not total), and may not have all Woo columns
+    const lineItemData: Record<string, unknown> = {
       order_id: wooOrder.id,
       id: item.id,
       order_number: orderNumber,
@@ -263,7 +263,6 @@ export async function syncOrderLineItemsFromWooOrder(
       tax_class: item.tax_class || null,
       subtotal: String(item.subtotal ?? '0'),
       subtotal_tax: String(item.subtotal_tax ?? '0'),
-      total: String(item.total ?? '0'),
       total_tax: String(item.total_tax ?? '0'),
       sku: item.sku || null,
       price: String(item.price ?? '0'),
