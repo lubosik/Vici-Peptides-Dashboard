@@ -38,9 +38,6 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
     const wooClient = new WooCommerceClient({ storeUrl, consumerKey, consumerSecret })
 
-    const supabase = createAdminClient()
-    const wooClient = new WooCommerceClient({ storeUrl, consumerKey, consumerSecret })
-
     // 1) Fetch all order IDs from WooCommerce (list orders, paginate)
     const allOrderIds: { id: number; number: string }[] = []
     let page = 1
