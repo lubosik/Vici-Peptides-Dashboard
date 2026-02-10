@@ -195,7 +195,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                           <TableRow key={order.order_number}>
                             <TableCell className="font-medium">
                               <Link
-                                href={`/orders/${encodeURIComponent(order.order_number)}`}
+                                href={`/orders/${order.woo_order_id != null ? order.woo_order_id : encodeURIComponent(order.order_number)}`}
                                 className="text-primary hover:underline"
                               >
                                 {order.order_number}
@@ -243,7 +243,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                                   wooOrderId={order.woo_order_id}
                                 />
                                 <Button variant="ghost" size="sm" asChild>
-                                  <Link href={`/orders/${encodeURIComponent(order.order_number)}`}>
+                                  <Link href={`/orders/${order.woo_order_id != null ? order.woo_order_id : encodeURIComponent(order.order_number)}`}>
                                     View
                                   </Link>
                                 </Button>

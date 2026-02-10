@@ -114,7 +114,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   
                   // Revalidate the page to show updated status
                   const { revalidatePath } = await import('next/cache')
-                  revalidatePath(`/orders/${encodeURIComponent(order.order_number)}`)
+                  revalidatePath(`/orders/${orderNumber}`)
                   revalidatePath('/orders')
                 }}>
                   <Select name="status" defaultValue={order.order_status} className="w-48">

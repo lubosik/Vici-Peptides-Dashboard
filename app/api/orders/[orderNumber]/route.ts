@@ -25,41 +25,53 @@ export async function GET(
     }
 
     const supabase = createAdminClient()
-
-    // Try to find order in Supabase
-    const formatsToTry = [
-      orderNumber,
-      decodeURIComponent(orderNumber),
-      orderNumber.replace(/%20/g, ' ').replace(/%23/g, '#'),
-      orderNumber.replace(/\+/g, ' '),
-    ]
-    const uniqueFormats = Array.from(new Set(formatsToTry))
+    const raw = orderNumber.trim()
+    const numericId = /^\d+$/.test(raw) ? parseInt(raw, 10) : null
 
     let order = null
-    for (const format of uniqueFormats) {
+    if (numericId != null) {
       const { data } = await supabase
         .from('orders')
         .select('*')
-        .eq('order_number', format)
+        .eq('woo_order_id', numericId)
         .maybeSingle()
-      
-      if (data) {
-        order = data
-        break
-      }
+      if (data) order = data
     }
-
-    // If not found, try extracting number and searching
     if (!order) {
-      const numberMatch = orderNumber.match(/\d+/)
-      if (numberMatch) {
-        const { data: orders } = await supabase
+      const formatsToTry = [
+        raw,
+        decodeURIComponent(raw),
+        raw.replace(/%20/g, ' ').replace(/%23/g, '#'),
+        raw.replace(/\+/g, ' '),
+      ]
+      for (const format of Array.from(new Set(formatsToTry))) {
+        const { data } = await supabase
           .from('orders')
           .select('*')
-          .ilike('order_number', `%${numberMatch[0]}%`)
-          .limit(1)
-        if (orders && orders.length > 0) {
-          order = orders[0]
+          .eq('order_number', format)
+          .maybeSingle()
+        if (data) {
+          order = data
+          break
+        }
+      }
+    }
+    if (!order) {
+      const numberMatch = raw.match(/\d+/)
+      if (numberMatch) {
+        const { data: byWooId } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('woo_order_id', parseInt(numberMatch[0], 10))
+          .maybeSingle()
+        if (byWooId) order = byWooId
+        else {
+          const { data: orders } = await supabase
+            .from('orders')
+            .select('*')
+            .ilike('order_number', `%${numberMatch[0]}%`)
+            .limit(1)
+          if (orders?.length) order = orders[0]
         }
       }
     }

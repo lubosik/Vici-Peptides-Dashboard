@@ -103,28 +103,39 @@ export async function getOrders(
     free_shipping: Boolean(order.free_shipping),
   }))
 
-  // Get line item counts (only if we have orders)
-  const countsMap = new Map<string, number>()
+  // Get line item counts by order_number and by order_id (woo_order_id) so Items show even if format differs
+  const countsByOrderNumber = new Map<string, number>()
+  const countsByOrderId = new Map<number, number>()
   if (ordersWithMargin.length > 0) {
     const orderNumbers = ordersWithMargin.map((o) => o.order_number)
-    const { data: lineCounts, error: lineCountsError } = await supabase
+    const { data: byNumber } = await supabase
       .from('order_lines')
-      .select('order_number')
+      .select('order_number, order_id')
       .in('order_number', orderNumbers)
-
-    if (lineCountsError) {
-      console.error('Error fetching line item counts:', lineCountsError)
-      // Continue without line counts rather than failing
-    } else {
-      lineCounts?.forEach((line) => {
-        countsMap.set(line.order_number, (countsMap.get(line.order_number) || 0) + 1)
+    byNumber?.forEach((line: any) => {
+      countsByOrderNumber.set(line.order_number, (countsByOrderNumber.get(line.order_number) || 0) + 1)
+      if (line.order_id != null)
+        countsByOrderId.set(Number(line.order_id), (countsByOrderId.get(Number(line.order_id)) || 0) + 1)
+    })
+    const wooIds = ordersWithMargin.map((o) => o.woo_order_id).filter((id): id is number => id != null)
+    if (wooIds.length > 0) {
+      const { data: byId } = await supabase
+        .from('order_lines')
+        .select('order_id')
+        .in('order_id', wooIds)
+      byId?.forEach((line: any) => {
+        const id = Number(line.order_id)
+        countsByOrderId.set(id, (countsByOrderId.get(id) || 0) + 1)
       })
     }
   }
 
   const ordersWithCounts = ordersWithMargin.map((order) => ({
     ...order,
-    line_items_count: countsMap.get(order.order_number) || 0,
+    line_items_count:
+      countsByOrderNumber.get(order.order_number) ||
+      (order.woo_order_id != null ? countsByOrderId.get(Number(order.woo_order_id)) : 0) ||
+      0,
   }))
 
   return {
@@ -137,75 +148,78 @@ export async function getOrders(
 }
 
 /**
- * Get single order with line items
+ * Get single order with line items.
+ * Order identifier can be the numeric WooCommerce ID (e.g. "2539") or order_number (e.g. "Order #2539").
+ * We use the ID in URLs: /orders/2539 → GET wp-json/wc/v3/orders/2539
  */
 export async function getOrderWithLines(
   supabase: SupabaseClient,
   orderNumber: string
 ) {
-  // Try multiple formats of the order number
-  const formatsToTry = [
-    orderNumber, // Original
-    decodeURIComponent(orderNumber), // URL decoded
-    orderNumber.replace(/%20/g, ' ').replace(/%23/g, '#'), // Manual decode
-    orderNumber.replace(/\+/g, ' '), // Plus to space
-  ]
-  
-  // Remove duplicates
-  const uniqueFormats = Array.from(new Set(formatsToTry))
-  
+  const raw = orderNumber.trim()
+  const numericId = /^\d+$/.test(raw) ? parseInt(raw, 10) : null
+
   let order = null
   let orderError = null
-  
-  // Try each format until we find a match
-  for (const format of uniqueFormats) {
+
+  // If param is numeric (e.g. 2539), look up by woo_order_id first to match API URL
+  if (numericId != null) {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .eq('order_number', format)
+      .eq('woo_order_id', numericId)
       .maybeSingle()
-    
     if (data && !error) {
       order = data
       orderError = null
-      console.log(`✅ Found order with format: "${format}"`)
-      break
-    }
-    
-    if (error) {
-      console.error(`Error trying format "${format}":`, error)
-      orderError = error
+    } else if (error) orderError = error
+  }
+
+  // Otherwise try order_number formats
+  if (!order) {
+    const formatsToTry = [
+      raw,
+      decodeURIComponent(raw),
+      raw.replace(/%20/g, ' ').replace(/%23/g, '#'),
+      raw.replace(/\+/g, ' '),
+    ]
+    const uniqueFormats = Array.from(new Set(formatsToTry))
+    for (const format of uniqueFormats) {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('order_number', format)
+        .maybeSingle()
+      if (data && !error) {
+        order = data
+        orderError = null
+        break
+      }
+      if (error) orderError = error
     }
   }
 
-  // If still not found, try a case-insensitive search or partial match
   if (!order) {
-    // Extract just the number part (e.g., "1791" from "Order #1791" or "Order%20%231791")
-    const numberMatch = orderNumber.match(/\d+/)
+    const numberMatch = raw.match(/\d+/)
     if (numberMatch) {
       const orderNum = numberMatch[0]
-      console.log(`🔍 Trying to find order by number: ${orderNum}`)
-      
-      // Try searching for orders containing this number
-      const { data: orders } = await supabase
+      const { data: byWooId } = await supabase
         .from('orders')
         .select('*')
-        .ilike('order_number', `%${orderNum}%`)
-        .limit(5)
-      
-      if (orders && orders.length > 0) {
-        // Find exact match if possible
-        const exactMatch = orders.find(o => 
-          o.order_number.toLowerCase().includes(orderNum.toLowerCase())
+        .eq('woo_order_id', parseInt(orderNum, 10))
+        .maybeSingle()
+      if (byWooId) order = byWooId
+      else {
+        const { data: orders } = await supabase
+          .from('orders')
+          .select('*')
+          .ilike('order_number', `%${orderNum}%`)
+          .limit(5)
+        const exactMatch = orders?.find((o: any) =>
+          String(o.order_number).toLowerCase().includes(orderNum.toLowerCase())
         )
-        if (exactMatch) {
-          order = exactMatch
-          console.log(`✅ Found order by number search: "${order.order_number}"`)
-        } else {
-          // Use first match
-          order = orders[0]
-          console.log(`⚠️ Using first match by number search: "${order.order_number}"`)
-        }
+        if (exactMatch) order = exactMatch
+        else if (orders?.length) order = orders[0]
       }
     }
   }
@@ -216,15 +230,12 @@ export async function getOrderWithLines(
   }
   
   if (!order) {
-    console.error(`❌ Order not found after trying formats:`, uniqueFormats)
-    
-    // Get sample orders for debugging
+    console.error(`❌ Order not found:`, orderNumber)
     const { data: sampleOrders } = await supabase
       .from('orders')
-      .select('order_number')
+      .select('order_number, woo_order_id')
       .limit(10)
-    console.error(`   Sample orders in database:`, sampleOrders?.map(o => o.order_number))
-    
+    console.error(`   Sample orders in database:`, sampleOrders?.map((o: any) => `${o.order_number} (id: ${o.woo_order_id})`))
     throw new Error(`Order not found: ${orderNumber}`)
   }
   
