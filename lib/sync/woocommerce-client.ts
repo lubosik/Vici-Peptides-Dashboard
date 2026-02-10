@@ -116,6 +116,14 @@ export class WooCommerceClient {
   }
 
   /**
+   * Get a single product by ID (for stock_quantity, stock_status, etc.)
+   * GET /wp-json/wc/v3/products/<id>
+   */
+  async getProduct(productId: number): Promise<any> {
+    return this.request(`products/${productId}`)
+  }
+
+  /**
    * Fetch all orders with pagination
    */
   async fetchOrders(options: {

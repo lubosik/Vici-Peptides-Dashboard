@@ -6,16 +6,12 @@ import { ExpenseSummary } from '@/lib/queries/expenses'
 import { RevenueChart } from '@/components/charts/revenue-chart'
 import { NetProfitChart } from '@/components/charts/net-profit-chart'
 import { ExpensesChart } from '@/components/charts/expenses-chart'
-import { TopProductsRangeSelector } from '@/components/dashboard/top-products-range-selector'
 import { formatCurrency, formatPercent } from '@/lib/metrics/calculations'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import type { TopProductsDateRange } from '@/lib/metrics/queries'
 
 interface DashboardContentProps {
   kpis: DashboardKPIs
   revenueData: Array<{ date: string; revenue: number; profit: number; orders: number }>
-  topProducts: Array<{ productId: number; productName: string; revenue: number; qtySold: number; profit: number }>
-  topProductsRange?: { range: TopProductsDateRange; dateFrom?: string; dateTo?: string }
   netProfitData: Array<{ date: string; revenue: number; expenses: number; netProfit: number }>
   expenseSummary: ExpenseSummary
 }
@@ -23,8 +19,6 @@ interface DashboardContentProps {
 export function DashboardContent({
   kpis,
   revenueData,
-  topProducts,
-  topProductsRange,
   netProfitData,
   expenseSummary,
 }: DashboardContentProps) {
@@ -169,74 +163,15 @@ export function DashboardContent({
         </Card>
       </div>
 
-      {/* Top Products & Expenses Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <CardTitle>Top 5 Products</CardTitle>
-                <CardDescription>
-                  Best selling by quantity sold (by order date)
-                  <span className="block text-xs text-muted-foreground mt-1">
-                    BAC Water excluded
-                  </span>
-                </CardDescription>
-              </div>
-              {topProductsRange && (
-                <TopProductsRangeSelector
-                  range={topProductsRange.range}
-                  dateFrom={topProductsRange.dateFrom}
-                  dateTo={topProductsRange.dateTo}
-                />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {topProducts.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No products found
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {topProducts.slice(0, 5).map((product, index) => (
-                  <div key={`${product.productId}-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <div className="font-medium">{product.productName}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {product.qtySold.toLocaleString()} units sold
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium text-green-600">
-                        {formatCurrency(product.revenue)}
-                      </div>
-                      <div className={`text-sm ${product.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        Profit: {formatCurrency(product.profit)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Expenses by Category</CardTitle>
-            <CardDescription>Breakdown of expenses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ExpensesChart data={expenseSummary.expensesByCategory} />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Expenses by Category</CardTitle>
+          <CardDescription>Breakdown of expenses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ExpensesChart data={expenseSummary.expensesByCategory} />
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -28,7 +28,7 @@ import { WooCommerceClient } from '../lib/sync/woocommerce-client'
 import { normalizeOrder } from '../lib/sync/woocommerce-normalizer'
 import { syncOrderLineItemsFromWooOrder } from '../lib/sync/sync-order-line-items'
 
-const DELAY_MS = 550
+const DELAY_MS = 350
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
@@ -61,6 +61,10 @@ async function main() {
   }
 
   const total = orderIds.length
+  const startFrom = Math.max(0, parseInt(process.env.SYNC_START_FROM ?? '0', 10))
+  if (startFrom > 0) {
+    console.log(`Resuming from order index ${startFrom} (skipping first ${startFrom} orders).\n`)
+  }
   console.log(`Found ${total} orders. For each order we will:\n  1) GET orders/<id>\n  2) Upsert order into dashboard\n  3) Upsert line items into order_lines (so order page + Items column show them)\n`)
   console.log(`Running one request per order, ${DELAY_MS}ms delay between requests.\n`)
 
@@ -68,7 +72,7 @@ async function main() {
   let errors = 0
   let totalLineItemsWritten = 0
 
-  for (let i = 0; i < orderIds.length; i++) {
+  for (let i = startFrom; i < orderIds.length; i++) {
     const orderId = orderIds[i]
     try {
       const wooOrder = await wooClient.getOrder(orderId)

@@ -6,6 +6,7 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WooCommerceClient } from '@/lib/sync/woocommerce-client'
+import { normalizeOrder } from '@/lib/sync/woocommerce-normalizer'
 
 /** Get cost from WooCommerce line item meta_data */
 function getCostFromMeta(lineItem: any): number | null {
@@ -76,6 +77,40 @@ export interface SyncOrderLineItemsResult {
   order_number: string
   line_items_synced: number
   error?: string
+}
+
+/**
+ * Sync one order by WooCommerce order ID: GET orders/<id>, upsert order, sync line items.
+ * Use this when the orders list button sends woo_order_id for that row.
+ */
+export async function syncOrderAndLineItemsByWooId(
+  wooOrderId: number,
+  options?: { supabase?: SupabaseClient; wooClient?: WooCommerceClient }
+): Promise<SyncOrderLineItemsResult> {
+  const supabase = options?.supabase ?? createAdminClient()
+  const storeUrl = process.env.WOOCOMMERCE_STORE_URL
+  const consumerKey = process.env.WOOCOMMERCE_CONSUMER_KEY
+  const consumerSecret = process.env.WOOCOMMERCE_CONSUMER_SECRET
+  if (!storeUrl || !consumerKey || !consumerSecret) {
+    return { success: false, order_number: `Order #${wooOrderId}`, line_items_synced: 0, error: 'WooCommerce credentials not configured' }
+  }
+  const wooClient = options?.wooClient ?? new WooCommerceClient({ storeUrl, consumerKey, consumerSecret })
+  let wooOrder: any
+  try {
+    wooOrder = await wooClient.getOrder(wooOrderId)
+  } catch (e) {
+    return { success: false, order_number: `Order #${wooOrderId}`, line_items_synced: 0, error: e instanceof Error ? e.message : 'Failed to fetch order from WooCommerce' }
+  }
+  if (!wooOrder?.id) {
+    return { success: false, order_number: `Order #${wooOrderId}`, line_items_synced: 0, error: 'Order not found' }
+  }
+  const { order } = normalizeOrder(wooOrder)
+  const { error: orderErr } = await supabase.from('orders').upsert(order, { onConflict: 'order_number' })
+  if (orderErr) {
+    return { success: false, order_number: order.order_number, line_items_synced: 0, error: orderErr.message }
+  }
+  const { line_items_synced } = await syncOrderLineItemsFromWooOrder(supabase, wooClient, wooOrder, order.order_number)
+  return { success: true, order_number: order.order_number, line_items_synced }
 }
 
 /**

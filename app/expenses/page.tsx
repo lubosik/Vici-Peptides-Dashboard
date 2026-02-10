@@ -13,7 +13,6 @@ import { Plus, Search, Download, ChevronLeft, ChevronRight, Upload } from 'lucid
 import { ExpensesChart } from '@/components/charts/expenses-chart'
 import { AddExpenseDialog } from '@/components/expenses/add-expense-dialog'
 import { DeleteExpenseButton } from '@/components/expenses/delete-expense-button'
-import { SyncShippoShippingButton } from '@/components/expenses/sync-shippo-shipping-button'
 
 // Force dynamic rendering to prevent build-time errors when env vars aren't available
 export const dynamic = 'force-dynamic'
@@ -142,7 +141,6 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <SyncShippoShippingButton />
                 <Button variant="outline" asChild>
                   <Link href="/expenses/import">
                     <Upload className="mr-2 h-4 w-4" />

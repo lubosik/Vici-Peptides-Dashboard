@@ -3,7 +3,7 @@ import { Header } from '@/components/header'
 import { DashboardContent } from '@/components/dashboard/dashboard-content'
 import { DashboardClient } from '@/components/dashboard/dashboard-client'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getDashboardKPIs, getTopProducts, type TopProductsDateRange } from '@/lib/metrics/queries'
+import { getDashboardKPIs } from '@/lib/metrics/queries'
 import { getRevenueOverTime } from '@/lib/metrics/queries'
 import { getNetProfitOverTime } from '@/lib/metrics/net-profit'
 import { getExpenseSummary } from '@/lib/queries/expenses'
@@ -11,41 +11,21 @@ import { getExpenseSummary } from '@/lib/queries/expenses'
 // Force dynamic rendering to ensure real-time data
 export const dynamic = 'force-dynamic'
 
-interface DashboardPageProps {
-  searchParams: Promise<{ topRange?: string; topFrom?: string; topTo?: string }>
-}
-
-export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+export default async function DashboardPage() {
   const supabase = createAdminClient()
-  const params = await searchParams
-  const topRange = (params.topRange || 'all') as TopProductsDateRange
-  const topFrom = params.topFrom
-  const topTo = params.topTo
 
-  // Fetch all dashboard data in parallel
-  const [kpis, revenueDataRaw, topProductsRaw, netProfitData, expenseSummary] = await Promise.all([
+  const [kpis, revenueDataRaw, netProfitData, expenseSummary] = await Promise.all([
     getDashboardKPIs(supabase, 'all'),
     getRevenueOverTime(supabase, 30),
-    getTopProducts(supabase, 5, { range: topRange, dateFrom: topFrom, dateTo: topTo }),
     getNetProfitOverTime(supabase, 30),
     getExpenseSummary(supabase),
   ])
 
-  // Transform revenue data to match component expectations
   const revenueData = revenueDataRaw.map(d => ({
     date: d.date,
     revenue: d.revenue,
     profit: d.profit,
-    orders: d.orders || 0, // Add orders property (default to 0 if not present)
-  }))
-
-  // Transform top products to match component expectations
-  const topProducts = topProductsRaw.map(p => ({
-    productId: p.productId,
-    productName: p.productName,
-    revenue: p.revenue,
-    qtySold: p.qtySold,
-    profit: p.profit,
+    orders: d.orders || 0,
   }))
 
   return (
@@ -59,8 +39,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <DashboardContent
                 kpis={kpis}
                 revenueData={revenueData}
-                topProducts={topProducts}
-                topProductsRange={{ range: topRange, dateFrom: topFrom, dateTo: topTo }}
                 netProfitData={netProfitData}
                 expenseSummary={expenseSummary}
               />

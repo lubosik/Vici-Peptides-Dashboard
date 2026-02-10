@@ -31,7 +31,7 @@ export function RetrieveLineItemsButton({
       const res = await fetch('/api/orders/sync-line-items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_number: orderNumber }),
+        body: JSON.stringify({ order_number: orderNumber, woo_order_id: wooOrderId }),
       })
       const data = await res.json()
       if (res.ok && data.success) {

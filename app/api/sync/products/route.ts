@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
       const ourCost = wooCost ?? existing?.our_cost ?? null
 
+      const stockQty = product.stock_quantity != null ? Math.max(0, parseInt(String(product.stock_quantity), 10) || 0) : null
       const { error } = await supabase
         .from('products')
         .upsert(
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
             sku_code: product.sku || null,
             retail_price: parseFloat(product.regular_price || product.price || '0') || null,
             our_cost: ourCost,
-            current_stock: product.stock_quantity ?? null,
+            current_stock: stockQty,
             stock_status:
               product.stock_status === 'instock'
                 ? 'In Stock'
@@ -112,6 +113,7 @@ export async function POST(request: NextRequest) {
               .maybeSingle()
             const varOurCost = varCost ?? existingVar?.our_cost ?? ourCost ?? null
 
+            const varStockQty = variation.stock_quantity != null ? Math.max(0, parseInt(String(variation.stock_quantity), 10) || 0) : null
             const { error: varErr } = await supabase
               .from('products')
               .upsert(
@@ -123,14 +125,14 @@ export async function POST(request: NextRequest) {
                   retail_price:
                     parseFloat(variation.regular_price || variation.price || '0') || null,
                   our_cost: varOurCost,
-                  current_stock: variation.stock_quantity ?? null,
+                  current_stock: varStockQty,
                   stock_status:
                     variation.stock_status === 'instock'
                       ? 'In Stock'
                       : variation.stock_status === 'onbackorder'
                         ? 'LOW STOCK'
                         : 'OUT OF STOCK',
-                  qty_sold: 0,
+                  qty_sold: Math.max(0, parseInt(variation.total_sales || '0', 10) || 0),
                 },
                 { onConflict: 'woo_product_id' }
               )

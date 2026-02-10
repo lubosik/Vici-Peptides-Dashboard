@@ -14,10 +14,9 @@ export const dynamic = 'force-dynamic'
 
 export default function SettingsPage() {
   const router = useRouter()
-  const [syncing, setSyncing] = useState(false)
   const [syncingDashboard, setSyncingDashboard] = useState(false)
   const [syncingAllOrders, setSyncingAllOrders] = useState(false)
-  const [resyncingShippo, setResyncingShippo] = useState(false)
+  const [refreshingStock, setRefreshingStock] = useState(false)
   const [backfillingCosts, setBackfillingCosts] = useState(false)
   const [syncStatus, setSyncStatus] = useState<{ success: boolean; message: string } | null>(null)
 
@@ -110,90 +109,25 @@ export default function SettingsPage() {
     }
   }
 
-  const handleSyncLineItems = async () => {
-    setSyncing(true)
-    setSyncStatus(null)
-    const MAX_BATCHES = 20
-    let totalSynced = 0
-    let totalErrors = 0
-    let batchCount = 0
-    try {
-      for (let i = 0; i < MAX_BATCHES; i++) {
-        const response = await fetch('/api/settings/sync-line-items', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        })
-        if (response.status === 504) {
-          setSyncStatus({
-            success: false,
-            message: 'Request timed out. You can click again to sync more.',
-          })
-          break
-        }
-        const data = await response.json().catch(() => ({}))
-        if (!response.ok) {
-          setSyncStatus({
-            success: false,
-            message: data.error || 'Failed to sync line items',
-          })
-          break
-        }
-        totalSynced += data.synced ?? 0
-        totalErrors += data.errors ?? 0
-        batchCount++
-        if (!data.hasMore) {
-          setSyncStatus({
-            success: true,
-            message: `Synced line items for ${totalSynced} orders.${totalErrors > 0 ? ` ${totalErrors} errors.` : ''}${data.message ? ` ${data.message}` : ''}`,
-          })
-          setTimeout(() => router.refresh(), 2000)
-          break
-        }
-        setSyncStatus({
-          success: true,
-          message: `Syncing... ${totalSynced} orders so far (batch ${batchCount})`,
-        })
-      }
-      if (batchCount >= MAX_BATCHES && totalSynced > 0) {
-        setSyncStatus({
-          success: true,
-          message: `Synced ${totalSynced} orders (max batches reached). Click again to sync more if needed.`,
-        })
-        setTimeout(() => router.refresh(), 2000)
-      }
-    } catch (error) {
-      setSyncStatus({
-        success: false,
-        message: 'Network error. Check your connection and try again.',
-      })
-    } finally {
-      setSyncing(false)
-    }
-  }
-
-  const handleResyncShippoExpenses = async (forceAll = false) => {
-    setResyncingShippo(true)
+  const handleRefreshProductStock = async () => {
+    setRefreshingStock(true)
     setSyncStatus(null)
     try {
-      const url = forceAll ? '/api/admin/resync-shippo-expenses?force=true' : '/api/admin/resync-shippo-expenses'
-      const res = await fetch(url, { method: 'POST' })
+      const res = await fetch('/api/sync/product-stock', { method: 'POST' })
       const data = await res.json()
       if (res.ok) {
         setSyncStatus({
           success: true,
-          message: data.updated
-            ? `Updated ${data.updated} Shippo expense amounts from Transactions API.`
-            : data.message || 'Shippo expenses resynced.',
+          message: data.message || `Updated stock for ${data.updated ?? 0} products.`,
         })
         setTimeout(() => router.refresh(), 2000)
       } else {
-        setSyncStatus({ success: false, message: data.error || 'Failed to resync Shippo expenses' })
+        setSyncStatus({ success: false, message: data.error || 'Failed to refresh product stock' })
       }
     } catch (e) {
-      setSyncStatus({ success: false, message: 'An error occurred while resyncing Shippo expenses' })
+      setSyncStatus({ success: false, message: 'An error occurred while refreshing product stock' })
     } finally {
-      setResyncingShippo(false)
+      setRefreshingStock(false)
     }
   }
 
@@ -264,7 +198,7 @@ export default function SettingsPage() {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => handleSyncWholeDashboard(false)}
-                        disabled={syncingDashboard || syncing || syncingAllOrders}
+                        disabled={syncingDashboard || syncingAllOrders}
                         className="flex items-center gap-2"
                       >
                         {syncingDashboard ? (
@@ -282,7 +216,7 @@ export default function SettingsPage() {
                       <Button
                         variant="outline"
                         onClick={handleFullResync}
-                        disabled={syncingDashboard || syncing || syncingAllOrders}
+                        disabled={syncingDashboard || syncingAllOrders}
                         className="flex items-center gap-2"
                         title="Re-fetch all products and orders from WooCommerce"
                       >
@@ -293,12 +227,12 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium text-foreground mb-1">Fetch all orders &amp; line items (GET each order)</p>
+                    <p className="text-sm font-medium text-foreground mb-1">Sync all orders</p>
                     <p className="text-sm text-muted-foreground mb-2">
-                      Calls WooCommerce <code className="text-xs bg-muted px-1 rounded">GET /orders/&lt;id&gt;</code> for every order, then inserts each order and its line items (exact API data, nothing made up). Runs in batches in the browser.
+                      Fetches every order from WooCommerce (<code className="text-xs bg-muted px-1 rounded">GET /orders/&lt;id&gt;</code>), upserts each order and its line items. Includes line items so each order page shows products. Runs in batches.
                     </p>
                     <p className="text-xs text-muted-foreground mb-3">
-                      If you see &quot;message port closed&quot; or errors from <code className="text-xs bg-muted px-1 rounded">content.js</code> / extensions, those are from Chrome extensions, not the app. For a reliable full sync of 210 orders with no timeout, run in terminal: <code className="text-xs bg-muted px-1 rounded">npm run sync-line-items</code>
+                      For a full sync with no timeout, run in terminal: <code className="text-xs bg-muted px-1 rounded">npm run sync-line-items</code>
                     </p>
                     <Button
                       onClick={handleSyncAllOrdersLineItems}
@@ -308,74 +242,39 @@ export default function SettingsPage() {
                       {syncingAllOrders ? (
                         <>
                           <RefreshCw className="h-4 w-4 animate-spin" />
-                          Fetching orders...
+                          Syncing orders...
                         </>
                       ) : (
                         <>
                           <RefreshCw className="h-4 w-4" />
-                          Fetch all orders &amp; line items
+                          Sync all orders &amp; line items
                         </>
                       )}
                     </Button>
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium text-foreground mb-1">Sync line items only (orders already in DB)</p>
+                    <p className="text-sm font-medium text-foreground mb-1">Refresh product stock from WooCommerce</p>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Fetch line items from WooCommerce for orders that are missing them. Ensures every order detail page shows what products were ordered.
+                      Calls <code className="text-xs bg-muted px-1 rounded">GET /products/&lt;id&gt;</code> for each product and updates current stock and stock status so dashboard reflects real-time levels (no negative stock).
                     </p>
                     <Button
-                      onClick={handleSyncLineItems}
-                      disabled={syncing || syncingDashboard || syncingAllOrders}
+                      onClick={handleRefreshProductStock}
+                      disabled={refreshingStock || syncingDashboard || syncingAllOrders}
                       className="flex items-center gap-2"
                     >
-                      {syncing ? (
+                      {refreshingStock ? (
                         <>
                           <RefreshCw className="h-4 w-4 animate-spin" />
-                          Syncing line items...
+                          Refreshing stock...
                         </>
                       ) : (
                         <>
                           <RefreshCw className="h-4 w-4" />
-                          Sync Line Items from WooCommerce
+                          Refresh product stock
                         </>
                       )}
                     </Button>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium text-foreground mb-1">Re-sync Shippo expenses (label costs)</p>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Re-fetch rate.amount from Shippo Transactions API (what you pay per label, not what buyer pays). Updates expenses with wrong amounts.
-                    </p>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button
-                        onClick={() => handleResyncShippoExpenses(false)}
-                        disabled={resyncingShippo || syncing || syncingDashboard}
-                        className="flex items-center gap-2"
-                      >
-                        {resyncingShippo ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            Resyncing...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="h-4 w-4" />
-                            Re-sync Shippo Expenses
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => handleResyncShippoExpenses(true)}
-                        disabled={resyncingShippo || syncing || syncingDashboard}
-                        className="flex items-center gap-2"
-                        title="Update all 121 expenses with API values (verification pass)"
-                      >
-                        Force Refresh All
-                      </Button>
-                    </div>
                   </div>
 
                   <div>
@@ -385,7 +284,7 @@ export default function SettingsPage() {
                     </p>
                     <Button
                       onClick={handleBackfillLineItemCosts}
-                      disabled={backfillingCosts || syncing || syncingDashboard}
+                      disabled={backfillingCosts || syncingDashboard}
                       className="flex items-center gap-2"
                     >
                       {backfillingCosts ? (
