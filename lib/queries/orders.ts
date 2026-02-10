@@ -241,51 +241,8 @@ export async function getOrderWithLines(
   
   console.log(`✅ Successfully found order: ${order.order_number}`)
 
-  // Use the actual order_number from the database for line items query
   const actualOrderNumber = order.order_number
-
-  // Debug: Check what order numbers exist in order_lines
-  if (process.env.NODE_ENV === 'development') {
-    const { data: sampleLines } = await supabase
-      .from('order_lines')
-      .select('order_number')
-      .limit(10)
-    console.log(`📊 Sample order_numbers in order_lines:`, sampleLines?.map(l => l.order_number).slice(0, 5))
-  }
-
-  // Get line items - use left join so we get line items even if product doesn't exist
-  // First, let's check if any line items exist at all for this order
-  const { count: lineItemsCount, error: countError } = await supabase
-    .from('order_lines')
-    .select('*', { count: 'exact', head: true })
-    .eq('order_number', actualOrderNumber)
-
-  if (countError) {
-    console.error('Error counting line items:', countError)
-  }
-
-  console.log(`🔍 Querying line items for order_number="${actualOrderNumber}" (found ${lineItemsCount || 0} total)`)
-
-  // Also try querying without exact match to see if there's a format mismatch
-  if (lineItemsCount === 0 && process.env.NODE_ENV === 'development') {
-    // Extract just the number part for fuzzy matching
-    const orderNumMatch = actualOrderNumber.match(/\d+/)
-    if (orderNumMatch) {
-      const { data: similarLines } = await supabase
-        .from('order_lines')
-        .select('order_number')
-        .ilike('order_number', `%${orderNumMatch[0]}%`)
-        .limit(5)
-      if (similarLines && similarLines.length > 0) {
-        console.warn(`⚠️  Found similar order numbers (fuzzy match):`, similarLines.map(l => l.order_number))
-      }
-    }
-  }
-
-  // Query line items by order_number first, then fallback to order_id (woo_order_id) if no results
-  let { data: lineItems, error: linesError } = await supabase
-    .from('order_lines')
-    .select(`
+  const selectCols = `
       line_id,
       product_id,
       qty_ordered,
@@ -297,33 +254,32 @@ export async function getOrderWithLines(
       order_number,
       order_id,
       products(product_id, product_name, sku_code)
-    `)
-    .eq('order_number', actualOrderNumber)
-    .order('line_id', { ascending: true })
+    `
 
-  // Fallback: if no line items by order_number, try by order_id (WooCommerce ID)
-  if ((!lineItems || lineItems.length === 0) && order.woo_order_id != null) {
-    const { data: byOrderId } = await supabase
+  // Query line items by order_id (WooCommerce ID) first — sync script always sets this, so order detail page always finds items
+  let lineItems: any[] | null = null
+  let linesError: any = null
+
+  if (order.woo_order_id != null) {
+    const res = await supabase
       .from('order_lines')
-      .select(`
-        line_id,
-        product_id,
-        qty_ordered,
-        our_cost_per_unit,
-        customer_paid_per_unit,
-        line_total,
-        line_cost,
-        line_profit,
-        order_number,
-        order_id,
-        products(product_id, product_name, sku_code)
-      `)
+      .select(selectCols)
       .eq('order_id', order.woo_order_id)
       .order('line_id', { ascending: true })
+    lineItems = res.data
+    linesError = res.error
+  }
 
-    if (byOrderId && byOrderId.length > 0) {
-      lineItems = byOrderId
-      linesError = null
+  // Fallback: by order_number in case order_id is missing on old rows
+  if ((!lineItems || lineItems.length === 0) && actualOrderNumber) {
+    const res = await supabase
+      .from('order_lines')
+      .select(selectCols)
+      .eq('order_number', actualOrderNumber)
+      .order('line_id', { ascending: true })
+    if (res.data && res.data.length > 0) {
+      lineItems = res.data
+      linesError = res.error
     }
   }
 

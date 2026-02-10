@@ -1,16 +1,20 @@
 /**
- * One-by-one sync of ALL orders and line items from WooCommerce API into the dashboard.
- * Uses GET /wp-json/wc/v3/orders/<id> for each order — exact API results, no made-up data.
- * Run from terminal to avoid browser timeouts ("message port closed").
+ * Sync ALL orders and their line items from WooCommerce into the dashboard.
  *
- * Usage: npx tsx scripts/sync-all-orders-line-items.ts
- * Or:    npm run sync-line-items
+ * For each order:
+ *  1. GET https://vicipeptides.com/wp-json/wc/v3/orders/<id> (exact API response, no made-up data)
+ *  2. Upsert the order into `orders` so the order exists (order_number = "Order #<id>", woo_order_id = id)
+ *  3. Upsert each line item into `order_lines` with order_id = Woo order id and order_number matching the order
  *
- * If you see "trigger functions can only be called as triggers" on order upsert:
- * Apply the migration in supabase/migrations/20260210000001_fix_trigger_call_order_totals.sql
- * via Supabase Dashboard → SQL Editor (paste and run), then re-run this script.
+ * Result:
+ *  - Order detail page (/orders/<id>) shows that order's line items
+ *  - Orders list "Items" column shows the count of line items per order
  *
- * Console errors like "content.js", "inject.bundle.js" come from browser extensions, not this app.
+ * Usage: npm run sync-line-items
+ * Or:    npx tsx scripts/sync-all-orders-line-items.ts
+ *
+ * If you see "trigger functions can only be called as triggers", apply
+ * supabase/migrations/20260210000001_fix_trigger_call_order_totals.sql in Supabase SQL Editor first.
  */
 
 import { config } from 'dotenv'
@@ -42,7 +46,7 @@ async function main() {
   const supabase = createAdminClient()
   const wooClient = new WooCommerceClient({ storeUrl, consumerKey, consumerSecret })
 
-  console.log('Fetching order IDs from WooCommerce...')
+  console.log('Fetching all order IDs from WooCommerce...')
   const orderIds: number[] = []
   let page = 1
   while (true) {
@@ -55,17 +59,22 @@ async function main() {
     if (result.orders.length < 100) break
     page++
   }
+
   const total = orderIds.length
-  console.log(`Found ${total} orders. Syncing one by one (GET orders/<id>), ${DELAY_MS}ms between requests.\n`)
+  console.log(`Found ${total} orders. For each order we will:\n  1) GET orders/<id>\n  2) Upsert order into dashboard\n  3) Upsert line items into order_lines (so order page + Items column show them)\n`)
+  console.log(`Running one request per order, ${DELAY_MS}ms delay between requests.\n`)
 
   let synced = 0
   let errors = 0
+  let totalLineItemsWritten = 0
+
   for (let i = 0; i < orderIds.length; i++) {
     const orderId = orderIds[i]
     try {
       const wooOrder = await wooClient.getOrder(orderId)
       const { order } = normalizeOrder(wooOrder)
 
+      // Ensure order exists so the order detail page and FK for order_lines work
       const { error: orderErr } = await supabase
         .from('orders')
         .upsert(order, { onConflict: 'order_number' })
@@ -77,15 +86,19 @@ async function main() {
         continue
       }
 
+      // Write line items for this order into order_lines (order_id + order_number so detail page and Items count work)
       const { line_items_synced } = await syncOrderLineItemsFromWooOrder(
         supabase,
         wooClient,
         wooOrder,
         order.order_number
       )
+
+      totalLineItemsWritten += line_items_synced
       synced++
-      if ((i + 1) % 20 === 0 || i === orderIds.length - 1) {
-        console.log(`[${i + 1}/${total}] Order ${orderId} — ${line_items_synced} line items`)
+
+      if ((i + 1) % 25 === 0 || i === orderIds.length - 1) {
+        console.log(`[${i + 1}/${total}] Order ${orderId} → ${line_items_synced} line items (total lines written: ${totalLineItemsWritten})`)
       }
     } catch (e) {
       console.error(`[${i + 1}/${total}] Order ${orderId} error:`, e instanceof Error ? e.message : e)
@@ -94,7 +107,8 @@ async function main() {
     await sleep(DELAY_MS)
   }
 
-  console.log(`\nDone. Synced ${synced}/${total} orders, ${errors} errors. Line items are in the dashboard.`)
+  console.log(`\nDone. Orders synced: ${synced}/${total}. Line items written: ${totalLineItemsWritten}. Errors: ${errors}.`)
+  console.log('Order detail pages (/orders/<id>) and the Orders list "Items" column will now show this data.')
   process.exit(errors > 0 ? 1 : 0)
 }
 
