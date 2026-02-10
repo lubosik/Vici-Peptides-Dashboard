@@ -294,8 +294,11 @@ export default function SettingsPage() {
 
                   <div>
                     <p className="text-sm font-medium text-foreground mb-1">Fetch all orders &amp; line items (GET each order)</p>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Calls WooCommerce <code className="text-xs bg-muted px-1 rounded">GET /orders/&lt;id&gt;</code> for every order (e.g. 207), then inserts each order and its line items into the dashboard. Use this to backfill or fix missing line items. Runs in batches; click once and wait until done.
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Calls WooCommerce <code className="text-xs bg-muted px-1 rounded">GET /orders/&lt;id&gt;</code> for every order, then inserts each order and its line items (exact API data, nothing made up). Runs in batches in the browser.
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      If you see &quot;message port closed&quot; or errors from <code className="text-xs bg-muted px-1 rounded">content.js</code> / extensions, those are from Chrome extensions, not the app. For a reliable full sync of 210 orders with no timeout, run in terminal: <code className="text-xs bg-muted px-1 rounded">npm run sync-line-items</code>
                     </p>
                     <Button
                       onClick={handleSyncAllOrdersLineItems}

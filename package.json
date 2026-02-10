@@ -4,7 +4,7 @@
   "description": "NeonMetrics Analytics Dashboard Demo",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3002",
+    "dev": "next dev -p 3004",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -12,6 +12,7 @@
     "reconcile": "tsx scripts/reconcile-ledger.ts",
     "extract-theme": "tsx scripts/extract-brand-theme-simple.ts",
     "diagnose": "tsx scripts/diagnose-supabase.ts",
+    "sync-line-items": "tsx scripts/sync-all-orders-line-items.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
