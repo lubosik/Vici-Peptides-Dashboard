@@ -17,11 +17,10 @@ export default function SettingsPage() {
   const [syncing, setSyncing] = useState(false)
   const [syncingDashboard, setSyncingDashboard] = useState(false)
   const [resyncingShippo, setResyncingShippo] = useState(false)
-  const [syncingInvoices, setSyncingInvoices] = useState(false)
   const [backfillingCosts, setBackfillingCosts] = useState(false)
   const [syncStatus, setSyncStatus] = useState<{ success: boolean; message: string } | null>(null)
 
-  const handleSyncWholeDashboard = async () => {
+  const handleSyncWholeDashboard = async (fullResync = false) => {
     setSyncingDashboard(true)
     setSyncStatus(null)
     try {
@@ -29,7 +28,7 @@ export default function SettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          mode: 'incremental',
+          mode: fullResync ? 'full' : 'incremental',
           orders: true,
           products: true,
           coupons: true,
@@ -38,8 +37,12 @@ export default function SettingsPage() {
       const data = await response.json()
       if (response.ok && data.success) {
         const orders = data.results?.orders
-        const msg = orders
-          ? `Synced ${orders.synced ?? 0} orders${orders.errors ? `, ${orders.errors} errors` : ''}.`
+        const products = data.results?.products
+        const parts: string[] = []
+        if (orders) parts.push(`${orders.synced ?? 0} orders`)
+        if (products) parts.push(`${products.synced ?? 0} products`)
+        const msg = parts.length
+          ? `Synced ${parts.join(', ')}.${(orders?.errors || products?.errors) ? ' Some errors.' : ''}`
           : 'Dashboard sync completed.'
         setSyncStatus({ success: true, message: msg })
         setTimeout(() => router.refresh(), 2000)
@@ -58,6 +61,8 @@ export default function SettingsPage() {
       setSyncingDashboard(false)
     }
   }
+
+  const handleFullResync = () => handleSyncWholeDashboard(true)
 
   const handleSyncLineItems = async () => {
     setSyncing(true)
@@ -118,37 +123,6 @@ export default function SettingsPage() {
       })
     } finally {
       setSyncing(false)
-    }
-  }
-
-  const handleSyncShippoInvoices = async () => {
-    setSyncingInvoices(true)
-    setSyncStatus(null)
-    try {
-      const res = await fetch('/api/admin/sync-shippo-invoices', { method: 'POST' })
-      const data = await res.json()
-      if (res.ok) {
-        setSyncStatus({
-          success: true,
-          message:
-            data.created > 0
-              ? `Created ${data.created} expense(s) from Shippo invoices.`
-              : data.message || 'Shippo invoices synced.',
-        })
-        setTimeout(() => router.refresh(), 2000)
-      } else {
-        setSyncStatus({
-          success: false,
-          message: data.error || data.message || 'Failed to sync Shippo invoices',
-        })
-      }
-    } catch (e) {
-      setSyncStatus({
-        success: false,
-        message: 'Network error. Check your connection and try again.',
-      })
-    } finally {
-      setSyncingInvoices(false)
     }
   }
 
@@ -239,25 +213,37 @@ export default function SettingsPage() {
                   <div>
                     <p className="text-sm font-medium text-foreground mb-1">Sync whole dashboard</p>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Fetch all updated orders (and products) from WooCommerce. Use this to bring in new orders and keep the dashboard live.
+                      Fetch orders and products from WooCommerce. Use incremental to bring in new data, or full resync to refresh all products and orders.
                     </p>
-                    <Button
-                      onClick={handleSyncWholeDashboard}
-                      disabled={syncingDashboard || syncing}
-                      className="flex items-center gap-2"
-                    >
-                      {syncingDashboard ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                          Syncing dashboard...
-                        </>
-                      ) : (
-                        <>
-                          <Database className="h-4 w-4" />
-                          Sync all orders from WooCommerce
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        onClick={() => handleSyncWholeDashboard(false)}
+                        disabled={syncingDashboard || syncing}
+                        className="flex items-center gap-2"
+                      >
+                        {syncingDashboard ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            Syncing...
+                          </>
+                        ) : (
+                          <>
+                            <Database className="h-4 w-4" />
+                            Sync (incremental)
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={handleFullResync}
+                        disabled={syncingDashboard || syncing}
+                        className="flex items-center gap-2"
+                        title="Re-fetch all products and orders from WooCommerce"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Full resync (products + orders)
+                      </Button>
+                    </div>
                   </div>
 
                   <div>
@@ -279,30 +265,6 @@ export default function SettingsPage() {
                         <>
                           <RefreshCw className="h-4 w-4" />
                           Sync Line Items from WooCommerce
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium text-foreground mb-1">Sync Shippo invoices (recommended)</p>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Pull PAID invoices from Shippo Invoices API into expenses. No Make.com needed.
-                    </p>
-                    <Button
-                      onClick={handleSyncShippoInvoices}
-                      disabled={syncingInvoices || syncing || syncingDashboard}
-                      className="flex items-center gap-2"
-                    >
-                      {syncingInvoices ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                          Syncing...
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="h-4 w-4" />
-                          Sync Shippo Invoices
                         </>
                       )}
                     </Button>

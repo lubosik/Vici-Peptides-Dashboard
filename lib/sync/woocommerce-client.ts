@@ -23,8 +23,16 @@ export class WooCommerceClient {
 
   constructor(config: WooCommerceConfig) {
     this.config = config
-    // Ensure store URL doesn't end with slash
-    const cleanUrl = config.storeUrl.replace(/\/$/, '')
+    const raw = (config.storeUrl || '').trim()
+    if (!raw) {
+      throw new Error('WOOCOMMERCE_STORE_URL is required (e.g. https://vicipeptides.com)')
+    }
+    if (raw.includes('example.com')) {
+      throw new Error(
+        'WOOCOMMERCE_STORE_URL must be your real store URL (e.g. https://vicipeptides.com), not example.com. Set it in .env.local and Vercel environment variables.'
+      )
+    }
+    const cleanUrl = raw.replace(/\/$/, '')
     this.baseUrl = `${cleanUrl}/wp-json/wc/v3`
   }
 

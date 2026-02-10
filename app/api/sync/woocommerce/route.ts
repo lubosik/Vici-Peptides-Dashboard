@@ -1,12 +1,13 @@
 /**
  * WooCommerce Sync API Route
  * POST /api/sync/woocommerce
- * 
+ *
  * Syncs WooCommerce data into Supabase
  * Server-side only - never exposes credentials to browser
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WooCommerceSync } from '@/lib/sync/woocommerce-sync'
 
@@ -63,6 +64,13 @@ export async function POST(request: NextRequest) {
       syncProducts,
       syncCoupons,
     })
+
+    if (result.success) {
+      revalidatePath('/')
+      revalidatePath('/analytics')
+      revalidatePath('/products')
+      revalidatePath('/orders')
+    }
 
     return NextResponse.json({
       success: result.success,

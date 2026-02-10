@@ -6,12 +6,15 @@ export const dynamic = 'force-dynamic'
 
 // Helper to get WooCommerce credentials (checked at runtime, not build time)
 function getWooCommerceCredentials() {
-  const WOOCOMMERCE_STORE_URL = process.env.WOOCOMMERCE_STORE_URL
+  const WOOCOMMERCE_STORE_URL = (process.env.WOOCOMMERCE_STORE_URL || '').trim()
   const WOOCOMMERCE_CONSUMER_KEY = process.env.WOOCOMMERCE_CONSUMER_KEY
   const WOOCOMMERCE_CONSUMER_SECRET = process.env.WOOCOMMERCE_CONSUMER_SECRET
 
   if (!WOOCOMMERCE_STORE_URL || !WOOCOMMERCE_CONSUMER_KEY || !WOOCOMMERCE_CONSUMER_SECRET) {
-    throw new Error('Missing WooCommerce credentials')
+    throw new Error('Missing WooCommerce credentials (WOOCOMMERCE_STORE_URL, CONSUMER_KEY, CONSUMER_SECRET)')
+  }
+  if (WOOCOMMERCE_STORE_URL.includes('example.com')) {
+    throw new Error('Set WOOCOMMERCE_STORE_URL to your real store (e.g. https://vicipeptides.com), not example.com')
   }
 
   return { WOOCOMMERCE_STORE_URL, WOOCOMMERCE_CONSUMER_KEY, WOOCOMMERCE_CONSUMER_SECRET }

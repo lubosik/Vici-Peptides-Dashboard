@@ -202,12 +202,13 @@ function getDateRangeForTopProducts(
   dateTo?: string
 ): { from: string; to: string } | null {
   const now = new Date()
-  const to = new Date(now)
-  to.setHours(23, 59, 59, 999)
+  const endOfToday = new Date(now)
+  endOfToday.setHours(23, 59, 59, 999)
   let from: Date
 
   if (range === 'custom' && dateFrom && dateTo) {
     from = new Date(dateFrom)
+    from.setHours(0, 0, 0, 0)
     const toDate = new Date(dateTo)
     toDate.setHours(23, 59, 59, 999)
     return { from: from.toISOString(), to: toDate.toISOString() }
@@ -220,7 +221,7 @@ function getDateRangeForTopProducts(
       break
     case 'week':
       from = new Date(now)
-      from.setDate(now.getDate() - 7)
+      from.setDate(now.getDate() - now.getDay())
       from.setHours(0, 0, 0, 0)
       break
     case 'month':
@@ -233,7 +234,7 @@ function getDateRangeForTopProducts(
     default:
       return null
   }
-  return { from: from.toISOString(), to: to.toISOString() }
+  return { from: from.toISOString(), to: endOfToday.toISOString() }
 }
 
 /**

@@ -6,22 +6,24 @@ import { SupabaseClient } from '@supabase/supabase-js'
 
 function getDateRange(period: string): { dateFrom: string; dateTo: string } {
   const now = new Date()
-  let dateTo = now.toISOString().split('T')[0]
+  const tomorrow = new Date(now)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowStr = tomorrow.toISOString().split('T')[0]
   let dateFrom: string
 
   switch (period) {
     case 'week':
-      const weekAgo = new Date(now)
-      weekAgo.setDate(weekAgo.getDate() - 7)
-      dateFrom = weekAgo.toISOString().split('T')[0]
+      const startOfWeek = new Date(now)
+      startOfWeek.setDate(now.getDate() - now.getDay())
+      startOfWeek.setHours(0, 0, 0, 0)
+      dateFrom = startOfWeek.toISOString().split('T')[0]
       break
     case 'month':
       dateFrom = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
       break
     case 'last_month':
       dateFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
-      dateTo = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
-      break
+      return { dateFrom, dateTo: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0] }
     case 'year':
       dateFrom = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0]
       break
@@ -29,7 +31,7 @@ function getDateRange(period: string): { dateFrom: string; dateTo: string } {
       dateFrom = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
   }
 
-  return { dateFrom, dateTo }
+  return { dateFrom, dateTo: tomorrowStr }
 }
 
 export async function getSalesReportFromDb(
@@ -49,7 +51,7 @@ export async function getSalesReportFromDb(
     .from('orders')
     .select('order_total, order_subtotal, shipping_charged, coupon_discount, order_status, order_number, woo_order_id')
     .gte('order_date', dateFrom)
-    .lte('order_date', dateTo)
+    .lt('order_date', dateTo)
     .not('order_status', 'in', '("checkout-draft","cancelled","draft")')
 
   if (error) throw error
@@ -99,7 +101,7 @@ export async function getTopSellersFromDb(
     .from('orders')
     .select('order_number, woo_order_id')
     .gte('order_date', dateFrom)
-    .lte('order_date', dateTo)
+    .lt('order_date', dateTo)
     .not('order_status', 'in', '("checkout-draft","cancelled","draft")')
 
   const orderNumbers = (orders || []).map((o: any) => o.order_number).filter(Boolean)
