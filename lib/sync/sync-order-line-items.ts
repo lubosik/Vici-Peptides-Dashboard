@@ -64,7 +64,7 @@ async function ensureProduct(
         current_stock: null,
         stock_status: 'OUT OF STOCK',
       },
-      { onConflict: 'product_id' }
+      { onConflict: 'woo_product_id' }
     )
     .select('product_id')
     .single()
@@ -130,14 +130,17 @@ export async function syncOrderLineItemsFromWoo(
   let lineItemsSynced = 0
 
   for (const item of wooOrder.line_items) {
-    // WooCommerce: item.price is NUMBER, item.total is STRING
+    // WooCommerce: use variation_id when > 0 so variant-level sales (e.g. Retatrutide 10mg) are correct
+    const effectiveWooId =
+      (Number(item.variation_id) || 0) > 0
+        ? Number(item.variation_id)
+        : Number(item.product_id) || 0
     const qty = parseInt(String(item.quantity || '1'), 10) || 1
     const customerPaidPerUnit =
       typeof item.price === 'number' ? item.price : parseFloat(String(item.price)) || 0
     const lineTotal = parseFloat(item.total) || 0
     const costFromMeta = getCostFromMeta(item)
-    const wooProductId = Number(item.product_id) || 0
-    const productId = await ensureProduct(supabase, wooProductId, item.name || '', item.price ?? '0')
+    const productId = await ensureProduct(supabase, effectiveWooId, item.name || '', item.price ?? '0')
     const ourCostPerUnit =
       costFromMeta ?? (productId > 0 ? await getProductCost(supabase, productId) : 0)
     const lineCost = ourCostPerUnit * qty

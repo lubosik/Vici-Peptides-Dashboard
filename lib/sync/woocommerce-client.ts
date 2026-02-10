@@ -238,6 +238,35 @@ export class WooCommerceClient {
   }
 
   /**
+   * Fetch variations for a variable product
+   */
+  async getProductVariations(
+    productId: number,
+    options: { page?: number; perPage?: number } = {}
+  ): Promise<any[]> {
+    const { page = 1, perPage = 100 } = options
+    return this.request<any[]>(`products/${productId}/variations`, {
+      params: { page, per_page: perPage },
+    })
+  }
+
+  /**
+   * Fetch all variations for a product (paginated)
+   */
+  async fetchAllVariations(productId: number): Promise<any[]> {
+    const all: any[] = []
+    let page = 1
+    while (true) {
+      const batch = await this.getProductVariations(productId, { page, perPage: 100 })
+      if (batch.length === 0) break
+      all.push(...batch)
+      if (batch.length < 100) break
+      page++
+    }
+    return all
+  }
+
+  /**
    * WooCommerce Reports API - list available reports
    */
   async getReports(): Promise<any[]> {

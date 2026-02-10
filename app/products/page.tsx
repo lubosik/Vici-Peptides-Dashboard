@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { Search, Package, AlertTriangle, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { AddProductDialog } from '@/components/products/add-product-dialog'
 import { DeleteProductButton } from '@/components/products/delete-product-button'
+import { SyncProductsButton } from '@/components/products/sync-products-button'
 
 // Force dynamic rendering to prevent build-time errors when env vars aren't available
 export const dynamic = 'force-dynamic'
@@ -33,8 +34,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     search: searchParams.search,
     stockStatus: searchParams.stockStatus,
   }
-  const sortBy = searchParams.sortBy || 'product_name'
-  const sortOrder = searchParams.sortOrder || 'asc'
+  const sortBy = searchParams.sortBy || 'qty_sold'
+  const sortOrder = (searchParams.sortOrder as 'asc' | 'desc') || 'desc'
 
   let productsData: any = {
     products: [],
@@ -112,10 +113,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Products</h1>
               <p className="text-sm sm:text-base text-muted-foreground mt-2">
-                Product inventory and sales analytics
+                Product inventory and sales (all-time)
               </p>
             </div>
-            <AddProductDialog />
+            <div className="flex items-center gap-2">
+              <SyncProductsButton />
+              <AddProductDialog />
+            </div>
             {hasError && (
               <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                 <p className="text-sm text-yellow-800 dark:text-yellow-200">
@@ -239,7 +243,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                       <TableHead>SKU</TableHead>
                       <TableHead>Stock Status</TableHead>
                       <TableHead className="text-right">Current Stock</TableHead>
-                      <TableHead className="text-right">Qty Sold</TableHead>
+                      <TableHead className="text-right">
+                        <Link href={`/products?${new URLSearchParams({ ...searchParams, sortBy: 'qty_sold', sortOrder: sortBy === 'qty_sold' && sortOrder === 'desc' ? 'asc' : 'desc' }).toString()}`}>
+                          Qty Sold
+                        </Link>
+                      </TableHead>
                       <TableHead className="text-right">Retail Price</TableHead>
                       <TableHead className="text-right">Our Cost</TableHead>
                       <TableHead className="text-right">Margin</TableHead>
@@ -267,7 +275,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                           <div className="flex items-center gap-2">
                             {getStockStatusIcon(product.stock_status)}
                             <span className={`px-2 py-1 rounded text-xs ${getStockStatusColor(product.stock_status)}`}>
-                              {product.stock_status}
+                              {product.stock_status || '—'}
                             </span>
                           </div>
                         </TableCell>
@@ -283,19 +291,19 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                           {product.qty_sold}
                         </TableCell>
                         <TableCell className="text-right">
-                          {product.retail_price ? formatCurrency(product.retail_price) : '-'}
+                          {product.retail_price != null ? formatCurrency(product.retail_price) : '$0.00'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {product.our_cost ? formatCurrency(product.our_cost) : '-'}
+                          {product.our_cost != null ? formatCurrency(product.our_cost) : '$0.00'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {product.margin_percent !== null ? formatPercent(product.margin_percent) : '-'}
+                          {product.margin_percent != null ? formatPercent(product.margin_percent) : '-'}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(product.total_revenue)}
+                          {formatCurrency(product.total_revenue ?? 0)}
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(product.total_profit)}
+                          {formatCurrency(product.total_profit ?? 0)}
                         </TableCell>
                         <TableCell className="text-right">
                           <DeleteProductButton

@@ -101,12 +101,13 @@ export async function getProducts(
     }
   }
 
-  // Get sales data from order_lines
+  // Get sales data from order_lines (includes qty_ordered for correct variant-level totals)
   // Join with orders to exclude draft/cancelled orders (no money exchanged)
   const { data: salesData, error: salesError } = await supabase
     .from('order_lines')
     .select(`
       product_id,
+      qty_ordered,
       line_total,
       line_cost,
       line_profit,
@@ -117,11 +118,12 @@ export async function getProducts(
 
   if (salesError) throw salesError
 
-  // Aggregate sales by product
+  // Aggregate sales by product (qty_sold from sum of qty_ordered so variants show correct totals)
   const salesMap = new Map<number, {
     total_revenue: number
     total_cost: number
     total_profit: number
+    qty_sold: number
   }>()
 
   salesData?.forEach(line => {
@@ -130,25 +132,26 @@ export async function getProducts(
       total_revenue: 0,
       total_cost: 0,
       total_profit: 0,
+      qty_sold: 0,
     }
     const lineTotal = Number(line.line_total) || 0
     const lineCost = Number(line.line_cost) || 0
-    // Calculate profit: always compute from line_total - line_cost to ensure accuracy
-    // The database trigger should maintain this, but we calculate it here as a fallback
     const lineProfit = lineTotal - lineCost
-    
+    const qty = Number((line as any).qty_ordered) || 0
     existing.total_revenue += lineTotal
     existing.total_cost += lineCost
     existing.total_profit += lineProfit
+    existing.qty_sold += qty
     salesMap.set(productId, existing)
   })
 
-  // Combine product data with sales metrics
+  // Combine product data with sales metrics (use order_lines qty_ordered for qty_sold when available)
   const productsWithSales: ProductWithSales[] = (products || []).map(product => {
     const sales = salesMap.get(product.product_id) || {
       total_revenue: 0,
       total_cost: 0,
       total_profit: 0,
+      qty_sold: 0,
     }
 
     // Calculate ROI
@@ -158,7 +161,7 @@ export async function getProducts(
 
     return {
       ...product,
-      qty_sold: Number(product.qty_sold) || 0,
+      qty_sold: sales.qty_sold > 0 ? sales.qty_sold : (Number(product.qty_sold) || 0),
       current_stock: Number(product.current_stock) || 0,
       our_cost: product.our_cost ? Number(product.our_cost) : null,
       retail_price: product.retail_price ? Number(product.retail_price) : null,
