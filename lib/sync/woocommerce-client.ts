@@ -37,7 +37,8 @@ export class WooCommerceClient {
   }
 
   /**
-   * Make authenticated request to WooCommerce API
+   * Make authenticated request to WooCommerce API.
+   * Uses HTTP Basic Auth: username = consumer key, password = consumer secret.
    */
   private async request<T>(
     endpoint: string,
@@ -51,17 +52,15 @@ export class WooCommerceClient {
       retryDelay = 1000,
     } = options
 
-    // Build URL with authentication
     const url = new URL(`${this.baseUrl}/${endpoint}`)
-    
-    // Add auth params (Basic Auth via query params for WooCommerce)
-    url.searchParams.append('consumer_key', this.config.consumerKey)
-    url.searchParams.append('consumer_secret', this.config.consumerSecret)
-    
-    // Add other query params
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.append(key, String(value))
     })
+
+    const basicAuth = Buffer.from(
+      `${this.config.consumerKey}:${this.config.consumerSecret}`,
+      'utf8'
+    ).toString('base64')
 
     let lastError: Error | null = null
 
@@ -71,6 +70,7 @@ export class WooCommerceClient {
           method,
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Basic ${basicAuth}`,
           },
           body: body ? JSON.stringify(body) : undefined,
         })

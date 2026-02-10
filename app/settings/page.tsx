@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const router = useRouter()
   const [syncing, setSyncing] = useState(false)
   const [syncingDashboard, setSyncingDashboard] = useState(false)
+  const [syncingAllOrders, setSyncingAllOrders] = useState(false)
   const [resyncingShippo, setResyncingShippo] = useState(false)
   const [backfillingCosts, setBackfillingCosts] = useState(false)
   const [syncStatus, setSyncStatus] = useState<{ success: boolean; message: string } | null>(null)
@@ -63,6 +64,51 @@ export default function SettingsPage() {
   }
 
   const handleFullResync = () => handleSyncWholeDashboard(true)
+
+  /** Fetch every order via GET orders/<id>, upsert order + line items. Runs until all orders done. */
+  const handleSyncAllOrdersLineItems = async () => {
+    setSyncingAllOrders(true)
+    setSyncStatus(null)
+    let offset = 0
+    let totalSynced = 0
+    let totalErrors = 0
+    let total = 0
+    try {
+      for (;;) {
+        const res = await fetch('/api/sync/all-orders-line-items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ offset, limit: 12 }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setSyncStatus({ success: false, message: data.error || 'Sync failed' })
+          break
+        }
+        total = data.total ?? 0
+        totalSynced += data.synced ?? 0
+        totalErrors += data.errors ?? 0
+        setSyncStatus({
+          success: true,
+          message: data.hasMore
+            ? `Syncing... ${offset + (data.synced ?? 0)}/${total} orders (${totalSynced} synced, ${totalErrors} errors). Keep going...`
+            : `Done. Synced ${totalSynced}/${total} orders; ${totalErrors} errors. Line items are now in the dashboard.`,
+        })
+        if (!data.hasMore) {
+          setTimeout(() => router.refresh(), 2000)
+          break
+        }
+        offset = data.nextOffset ?? offset + 12
+      }
+    } catch (e) {
+      setSyncStatus({
+        success: false,
+        message: 'Network error. You can click again to continue from where you left off.',
+      })
+    } finally {
+      setSyncingAllOrders(false)
+    }
+  }
 
   const handleSyncLineItems = async () => {
     setSyncing(true)
@@ -218,7 +264,7 @@ export default function SettingsPage() {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => handleSyncWholeDashboard(false)}
-                        disabled={syncingDashboard || syncing}
+                        disabled={syncingDashboard || syncing || syncingAllOrders}
                         className="flex items-center gap-2"
                       >
                         {syncingDashboard ? (
@@ -236,7 +282,7 @@ export default function SettingsPage() {
                       <Button
                         variant="outline"
                         onClick={handleFullResync}
-                        disabled={syncingDashboard || syncing}
+                        disabled={syncingDashboard || syncing || syncingAllOrders}
                         className="flex items-center gap-2"
                         title="Re-fetch all products and orders from WooCommerce"
                       >
@@ -247,13 +293,37 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium text-foreground mb-1">Sync line items only</p>
+                    <p className="text-sm font-medium text-foreground mb-1">Fetch all orders &amp; line items (GET each order)</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Calls WooCommerce <code className="text-xs bg-muted px-1 rounded">GET /orders/&lt;id&gt;</code> for every order (e.g. 207), then inserts each order and its line items into the dashboard. Use this to backfill or fix missing line items. Runs in batches; click once and wait until done.
+                    </p>
+                    <Button
+                      onClick={handleSyncAllOrdersLineItems}
+                      disabled={syncingAllOrders || syncingDashboard}
+                      className="flex items-center gap-2"
+                    >
+                      {syncingAllOrders ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Fetching orders...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4" />
+                          Fetch all orders &amp; line items
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">Sync line items only (orders already in DB)</p>
                     <p className="text-sm text-muted-foreground mb-3">
                       Fetch line items from WooCommerce for orders that are missing them. Ensures every order detail page shows what products were ordered.
                     </p>
                     <Button
                       onClick={handleSyncLineItems}
-                      disabled={syncing || syncingDashboard}
+                      disabled={syncing || syncingDashboard || syncingAllOrders}
                       className="flex items-center gap-2"
                     >
                       {syncing ? (

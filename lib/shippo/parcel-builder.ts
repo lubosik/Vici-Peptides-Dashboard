@@ -198,14 +198,17 @@ export async function fetchWooCommerceProducts(
     const batch = uniqueProductIds.slice(i, i + 100)
     const ids = batch.join(',')
     
-    const url = `${wooCommerceConfig.storeUrl}/wp-json/wc/v3/products?include=${ids}`
-    const urlObj = new URL(url)
-    urlObj.searchParams.append('consumer_key', wooCommerceConfig.consumerKey)
-    urlObj.searchParams.append('consumer_secret', wooCommerceConfig.consumerSecret)
-
+    const url = `${wooCommerceConfig.storeUrl.replace(/\/$/, '')}/wp-json/wc/v3/products?include=${ids}`
+    const basicAuth = Buffer.from(
+      `${wooCommerceConfig.consumerKey}:${wooCommerceConfig.consumerSecret}`,
+      'utf8'
+    ).toString('base64')
     try {
-      const response = await fetch(urlObj.toString(), {
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${basicAuth}`,
+        },
       })
 
       if (response.ok) {

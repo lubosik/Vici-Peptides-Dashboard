@@ -98,13 +98,16 @@ export async function syncShippingCostForOrder(
     if (!lineItems || lineItems.length === 0) {
       // Try to fetch from WooCommerce if not in Supabase
       if (wooCommerceConfig && order.woo_order_id) {
-        const url = `${wooCommerceConfig.storeUrl}/wp-json/wc/v3/orders/${order.woo_order_id}`
-        const urlObj = new URL(url)
-        urlObj.searchParams.append('consumer_key', wooCommerceConfig.consumerKey)
-        urlObj.searchParams.append('consumer_secret', wooCommerceConfig.consumerSecret)
-
-        const response = await fetch(urlObj.toString(), {
-          headers: { 'Content-Type': 'application/json' },
+        const url = `${wooCommerceConfig.storeUrl.replace(/\/$/, '')}/wp-json/wc/v3/orders/${order.woo_order_id}`
+        const basicAuth = Buffer.from(
+          `${wooCommerceConfig.consumerKey}:${wooCommerceConfig.consumerSecret}`,
+          'utf8'
+        ).toString('base64')
+        const response = await fetch(url, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Basic ${basicAuth}`,
+          },
         })
 
         if (response.ok) {
@@ -129,14 +132,17 @@ export async function syncShippingCostForOrder(
       throw new Error('WooCommerce config and order ID required to fetch shipping address')
     }
 
-    // Fetch full order from WooCommerce to get shipping address
-    const url = `${wooCommerceConfig.storeUrl}/wp-json/wc/v3/orders/${order.woo_order_id}`
-    const urlObj = new URL(url)
-    urlObj.searchParams.append('consumer_key', wooCommerceConfig.consumerKey)
-    urlObj.searchParams.append('consumer_secret', wooCommerceConfig.consumerSecret)
-
-    const response = await fetch(urlObj.toString(), {
-      headers: { 'Content-Type': 'application/json' },
+    // Fetch full order from WooCommerce to get shipping address (Basic Auth)
+    const url = `${wooCommerceConfig.storeUrl.replace(/\/$/, '')}/wp-json/wc/v3/orders/${order.woo_order_id}`
+    const basicAuth = Buffer.from(
+      `${wooCommerceConfig.consumerKey}:${wooCommerceConfig.consumerSecret}`,
+      'utf8'
+    ).toString('base64')
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${basicAuth}`,
+      },
     })
 
     if (!response.ok) {

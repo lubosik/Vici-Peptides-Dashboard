@@ -87,8 +87,14 @@ export function normalizeOrder(wooOrder: any): {
   const couponCode = couponLines.length > 0 ? couponLines[0].code : null
   const couponDiscount = parseFloat(wooOrder.discount_total || '0')
 
-  // Calculate totals
-  const subtotal = parseFloat(wooOrder.subtotal || '0')
+  // Calculate totals (WooCommerce Retrieve order may not have top-level subtotal)
+  let subtotal = parseFloat(wooOrder.subtotal || '0')
+  if (subtotal === 0 && wooOrder.line_items?.length) {
+    subtotal = (wooOrder.line_items as any[]).reduce(
+      (sum, item) => sum + parseFloat(item.total || '0'),
+      0
+    )
+  }
   const total = parseFloat(wooOrder.total || '0')
 
   // Normalize order

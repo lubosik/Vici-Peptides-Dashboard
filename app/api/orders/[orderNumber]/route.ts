@@ -84,24 +84,10 @@ export async function GET(
             consumerSecret,
           })
 
-          // Extract order ID from order number
           const orderIdMatch = orderNumber.match(/\d+/)
           if (orderIdMatch) {
             const orderId = parseInt(orderIdMatch[0])
-            // Make direct API call to WooCommerce
-            const url = `${storeUrl}/wp-json/wc/v3/orders/${orderId}`
-            const urlObj = new URL(url)
-            urlObj.searchParams.append('consumer_key', consumerKey)
-            urlObj.searchParams.append('consumer_secret', consumerSecret)
-            
-            const response = await fetch(urlObj.toString(), {
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-            if (response.ok) {
-              wooOrder = await response.json()
-            }
+            wooOrder = await wooClient.getOrder(orderId)
           }
         } catch (error) {
           console.error('Error fetching from WooCommerce:', error)

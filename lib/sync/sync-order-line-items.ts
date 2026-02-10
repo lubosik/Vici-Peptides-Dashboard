@@ -217,3 +217,90 @@ export async function syncOrderLineItemsFromWoo(
   console.log(`[LINE SYNC] Done. Synced ${lineItemsSynced}/${wooOrder.line_items.length}`)
   return { success: true, order_number: orderNumber, line_items_synced: lineItemsSynced }
 }
+
+/**
+ * Sync line items from an already-fetched WooCommerce order into order_lines.
+ * Use this when you have the full order object (e.g. from GET orders/<id>).
+ * Order must already exist in orders table with matching order_number.
+ * Uses variation_id when > 0 for correct variant-level product linking.
+ */
+export async function syncOrderLineItemsFromWooOrder(
+  supabase: SupabaseClient,
+  wooClient: WooCommerceClient,
+  wooOrder: any,
+  orderNumber: string
+): Promise<{ line_items_synced: number }> {
+  if (!wooOrder?.line_items || !Array.isArray(wooOrder.line_items) || wooOrder.line_items.length === 0) {
+    return { line_items_synced: 0 }
+  }
+
+  let lineItemsSynced = 0
+  for (const item of wooOrder.line_items) {
+    const effectiveWooId =
+      (Number(item.variation_id) || 0) > 0
+        ? Number(item.variation_id)
+        : Number(item.product_id) || 0
+    const qty = parseInt(String(item.quantity || '1'), 10) || 1
+    const customerPaidPerUnit =
+      typeof item.price === 'number' ? item.price : parseFloat(String(item.price)) || 0
+    const lineTotal = parseFloat(item.total) || 0
+    const costFromMeta = getCostFromMeta(item)
+    const productId = await ensureProduct(supabase, effectiveWooId, item.name || '', item.price ?? '0')
+    const ourCostPerUnit =
+      costFromMeta ?? (productId > 0 ? await getProductCost(supabase, productId) : 0)
+    const lineCost = ourCostPerUnit * qty
+    const lineProfit = lineTotal - lineCost
+
+    if (productId <= 0) continue
+
+    const lineItemData = {
+      order_id: wooOrder.id,
+      id: item.id,
+      order_number: orderNumber,
+      product_id: productId,
+      variation_id: item.variation_id || null,
+      name: item.name || '',
+      tax_class: item.tax_class || null,
+      subtotal: String(item.subtotal ?? '0'),
+      subtotal_tax: String(item.subtotal_tax ?? '0'),
+      total: String(item.total ?? '0'),
+      total_tax: String(item.total_tax ?? '0'),
+      sku: item.sku || null,
+      price: String(item.price ?? '0'),
+      taxes: item.taxes || null,
+      meta_data: item.meta_data || null,
+      raw_json: item,
+      qty_ordered: qty,
+      customer_paid_per_unit: customerPaidPerUnit,
+      our_cost_per_unit: ourCostPerUnit,
+      line_total: lineTotal,
+      line_cost: lineCost,
+      line_profit: lineProfit,
+    }
+
+    const { error: upsertError } = await supabase
+      .from('order_lines')
+      .upsert(lineItemData, { onConflict: 'order_id,id', ignoreDuplicates: false })
+
+    if (upsertError) {
+      const { data: existing } = await supabase
+        .from('order_lines')
+        .select('*')
+        .match({ order_id: wooOrder.id, id: item.id })
+        .maybeSingle()
+      if (existing) {
+        const { error: upErr } = await supabase
+          .from('order_lines')
+          .update(lineItemData)
+          .match({ order_id: wooOrder.id, id: item.id })
+        if (!upErr) lineItemsSynced++
+      } else {
+        const { error: inErr } = await supabase.from('order_lines').insert(lineItemData)
+        if (!inErr) lineItemsSynced++
+      }
+    } else {
+      lineItemsSynced++
+    }
+  }
+  return { line_items_synced: lineItemsSynced }
+}
