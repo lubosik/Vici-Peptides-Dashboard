@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Avoid SIGBUS in build worker on some systems (dev server stays up)
+  experimental: {
+    webpackBuildWorker: false,
+  },
   // Optimize images
   images: {
     domains: [],

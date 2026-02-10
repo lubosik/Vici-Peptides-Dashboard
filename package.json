@@ -4,9 +4,10 @@
   "description": "NeonMetrics Analytics Dashboard Demo",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3004",
+    "dev": "node --max-old-space-size=4096 ./node_modules/.bin/next dev --hostname 0.0.0.0 --port 3782",
+    "dev:clean": "rm -rf .next && npm run dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3782",
     "lint": "next lint",
     "import": "tsx scripts/import-csv.ts",
     "reconcile": "tsx scripts/reconcile-ledger.ts",
