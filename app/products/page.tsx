@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { Search, Package, AlertTriangle, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { AddProductDialog } from '@/components/products/add-product-dialog'
 import { DeleteProductButton } from '@/components/products/delete-product-button'
+import { StockStatusToggle } from '@/components/products/stock-status-toggle'
 import { SyncProductsButton } from '@/components/products/sync-products-button'
 
 // Force dynamic rendering to prevent build-time errors when env vars aren't available
@@ -273,10 +274,21 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            {getStockStatusIcon(product.stock_status)}
-                            <span className={`px-2 py-1 rounded text-xs ${getStockStatusColor(product.stock_status)}`}>
-                              {product.stock_status || '—'}
-                            </span>
+                            {(() => {
+                              const displayStatus = product.stock_status_override ?? product.stock_status
+                              return (
+                                <>
+                                  {getStockStatusIcon(displayStatus)}
+                                  <span className={`px-2 py-1 rounded text-xs ${getStockStatusColor(displayStatus)}`}>
+                                    {displayStatus || '—'}
+                                  </span>
+                                  <StockStatusToggle
+                                    productId={product.product_id}
+                                    currentStatus={displayStatus || 'OUT OF STOCK'}
+                                  />
+                                </>
+                              )
+                            })()}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">

@@ -47,13 +47,7 @@ export function DashboardContent({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{formatCurrency(kpis.totalRevenue)}</div>
-            <div className="flex items-center text-xs text-muted-foreground mt-1">
-              <TrendIcon value={periodChange.revenue.percent} />
-              <span className="ml-1">
-                {periodChange.revenue.percent > 0 ? '+' : ''}
-                {formatPercent(periodChange.revenue.percent)} from last period
-              </span>
-            </div>
+            <p className="text-xs text-muted-foreground mt-1">All time</p>
           </CardContent>
         </Card>
 
@@ -83,13 +77,7 @@ export function DashboardContent({
             <div className={`text-2xl font-bold ${kpis.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {formatCurrency(kpis.totalProfit)}
             </div>
-            <div className="flex items-center text-xs text-muted-foreground mt-1">
-              <TrendIcon value={periodChange.profit.percent} />
-              <span className="ml-1">
-                {periodChange.profit.percent > 0 ? '+' : ''}
-                {formatPercent(periodChange.profit.percent)} from last period
-              </span>
-            </div>
+            <p className="text-xs text-muted-foreground mt-1">All time</p>
             <p className="text-xs text-muted-foreground mt-1">
               Margin: {formatPercent(kpis.profitMargin)}
             </p>

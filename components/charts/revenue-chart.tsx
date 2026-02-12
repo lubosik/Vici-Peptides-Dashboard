@@ -73,38 +73,34 @@ export function RevenueChart({ data }: RevenueChartProps) {
             <Legend 
               wrapperStyle={{ color: 'rgb(180, 200, 220)' }}
             />
-            {/* Filled area for Data 02 (profit) */}
             <Area
               type="monotone"
               dataKey="profit"
               stroke="none"
               fill="url(#colorRevenue)"
             />
-            {/* Line for Data 01 (revenue) */}
             <Line
               type="monotone"
               dataKey="revenue"
               stroke="rgb(255, 150, 100)"
               strokeWidth={2}
-              name="Data 01"
+              name="Revenue"
               dot={{ r: 3, fill: 'rgb(255, 150, 100)' }}
             />
-            {/* Line for Data 02 (profit) */}
             <Line
               type="monotone"
               dataKey="profit"
               stroke="rgb(255, 100, 200)"
               strokeWidth={2}
-              name="Data 02"
+              name="Profit"
               dot={{ r: 3, fill: 'rgb(255, 100, 200)' }}
             />
-            {/* Line for Data 03 (orders as revenue proxy) */}
             <Line
               type="monotone"
               dataKey="orders"
               stroke="rgb(150, 100, 255)"
               strokeWidth={2}
-              name="Data 03"
+              name="Orders"
               dot={{ r: 3, fill: 'rgb(150, 100, 255)' }}
             />
           </LineChart>

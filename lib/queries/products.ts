@@ -70,14 +70,20 @@ export async function getProducts(
   }
 
   if (filters.stockStatus) {
-    query = query.eq('stock_status', filters.stockStatus)
+    if (filters.stockStatus === 'In Stock') {
+      query = query.or('stock_status_override.eq.In Stock,stock_status.eq.In Stock')
+    } else if (filters.stockStatus === 'OUT OF STOCK') {
+      query = query.or('stock_status_override.eq.OUT OF STOCK,stock_status.eq.OUT OF STOCK')
+    } else {
+      query = query.eq('stock_status', filters.stockStatus)
+    }
   } else if (filters.lowStock) {
     query = query.eq('stock_status', 'LOW STOCK')
   } else if (filters.outOfStock) {
-    query = query.eq('stock_status', 'OUT OF STOCK')
+    query = query.or('stock_status_override.eq.OUT OF STOCK,stock_status.eq.OUT OF STOCK')
   } else {
-    // Default: only show products in stock
-    query = query.eq('stock_status', 'In Stock')
+    // Default: only show products in stock (computed or override)
+    query = query.or('stock_status_override.eq.In Stock,stock_status.eq.In Stock')
   }
 
   // Apply sorting
@@ -109,7 +115,7 @@ export async function getProducts(
   const admin = createAdminClient()
   const { data: allLines, error: linesError } = await admin
     .from('order_lines')
-    .select('product_id, qty_ordered, line_total, line_cost, line_profit, order_number')
+    .select('product_id, qty_ordered, line_total, line_cost, line_profit, order_number, customer_paid_per_unit')
     .in('product_id', productIds)
 
   if (linesError) throw linesError
@@ -158,7 +164,19 @@ export async function getProducts(
     salesMap.set(productId, existing)
   })
 
-  // Combine product data with sales metrics (use order_lines qty_ordered for qty_sold when available)
+  // Retail price fallback from order_lines when product.retail_price is 0 or null
+  const retailByProductId = new Map<number, number>()
+  salesData?.forEach((line: { product_id: number; customer_paid_per_unit?: number; line_total?: number; qty_ordered?: number }) => {
+    const pid = line.product_id
+    const qty = Number((line as any).qty_ordered) || 1
+    const price = Number((line as any).customer_paid_per_unit) || (qty > 0 ? Number((line as any).line_total) / qty : 0) || 0
+    if (price > 0) {
+      const existing = retailByProductId.get(pid)
+      if (existing == null || price > existing) retailByProductId.set(pid, price)
+    }
+  })
+
+  // Combine product data with sales metrics; use product-based revenue/profit/margin formulas
   const productsWithSales: ProductWithSales[] = (products || []).map(product => {
     const sales = salesMap.get(product.product_id) || {
       total_revenue: 0,
@@ -166,24 +184,28 @@ export async function getProducts(
       total_profit: 0,
       qty_sold: 0,
     }
-
-    // Calculate ROI
-    const roiPercent = sales.total_cost > 0
-      ? (sales.total_profit / sales.total_cost) * 100
-      : null
+    const qty_sold = sales.qty_sold > 0 ? sales.qty_sold : (Number(product.qty_sold) || 0)
+    const retail_price = product.retail_price != null && Number(product.retail_price) > 0
+      ? Number(product.retail_price)
+      : (retailByProductId.get(product.product_id) ?? 0)
+    const our_cost = product.our_cost != null ? Number(product.our_cost) : 0
+    const revenue = retail_price * qty_sold
+    const profit = revenue - our_cost * qty_sold
+    const margin_percent = revenue > 0 ? (profit / revenue) * 100 : null
+    const roiPercent = sales.total_cost > 0 ? (sales.total_profit / sales.total_cost) * 100 : null
 
     return {
       ...product,
-      qty_sold: sales.qty_sold > 0 ? sales.qty_sold : (Number(product.qty_sold) || 0),
+      qty_sold,
       current_stock: Number(product.current_stock) || 0,
-      our_cost: product.our_cost ? Number(product.our_cost) : null,
-      retail_price: product.retail_price ? Number(product.retail_price) : null,
-      unit_margin: product.unit_margin ? Number(product.unit_margin) : null,
-      margin_percent: product.margin_percent ? Number(product.margin_percent) : null,
-      total_revenue: sales.total_revenue,
-      total_cost: sales.total_cost,
-      total_profit: sales.total_profit,
-      roi_percent: roiPercent, // Use the calculated value, not undefined
+      our_cost: product.our_cost != null ? Number(product.our_cost) : null,
+      retail_price: retail_price > 0 ? retail_price : null,
+      unit_margin: retail_price > 0 && our_cost >= 0 ? retail_price - our_cost : null,
+      margin_percent: margin_percent != null ? margin_percent : (product.margin_percent ? Number(product.margin_percent) : null),
+      total_revenue: revenue,
+      total_cost: our_cost * qty_sold,
+      total_profit: profit,
+      roi_percent: roiPercent,
     }
   })
 
@@ -301,7 +323,7 @@ export async function getProductById(
 export async function getStockSummary(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from('products')
-    .select('stock_status')
+    .select('stock_status, stock_status_override')
 
   if (error) throw error
 
@@ -313,7 +335,7 @@ export async function getStockSummary(supabase: SupabaseClient) {
   }
 
   data?.forEach(product => {
-    const status = (product.stock_status || '').toUpperCase().trim()
+    const status = ((product.stock_status_override ?? product.stock_status) || '').toUpperCase().trim()
     if (status === 'IN STOCK') summary.inStock++
     else if (status === 'LOW STOCK') summary.lowStock++
     else if (status === 'OUT OF STOCK') summary.outOfStock++

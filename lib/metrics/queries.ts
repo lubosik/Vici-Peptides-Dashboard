@@ -102,16 +102,14 @@ export async function getDashboardKPIs(
   // Get active products (in stock) - use case-insensitive check
   const { data: products, error: productsError } = await supabase
     .from('products')
-    .select('product_id, stock_status, current_stock')
+    .select('product_id, stock_status, stock_status_override, current_stock')
 
   if (productsError) {
     console.error('Error fetching products:', productsError)
-    // Don't throw, just return 0 for active products
   }
 
-  // Filter in memory for case-insensitive stock status check
   const activeProducts = products?.filter((p) => {
-    const status = (p.stock_status || '').toUpperCase().trim()
+    const status = ((p.stock_status_override ?? p.stock_status) || '').toUpperCase().trim()
     return status === 'IN STOCK' && (p.current_stock || 0) > 0
   }).length || 0
 
