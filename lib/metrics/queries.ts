@@ -65,9 +65,20 @@ export async function getDashboardKPIs(
 
   const totalRevenue = currentPeriod?.reduce((sum, o) => sum + (Number(o.order_total) || 0), 0) || 0
   const totalProfit = currentPeriod?.reduce((sum, o) => sum + (Number(o.order_profit) || 0), 0) || 0
-  const totalOrders = currentPeriod?.length || 0
+  const billableOrderCount = currentPeriod?.length || 0
   const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
+  const averageOrderValue = billableOrderCount > 0 ? totalRevenue / billableOrderCount : 0
+
+  // Total Orders: count all orders in the system (so displayed number matches actual order count)
+  let totalOrders = billableOrderCount
+  if (period === 'all') {
+    const { count: allOrdersCount } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+    totalOrders = allOrdersCount ?? billableOrderCount
+  } else {
+    totalOrders = billableOrderCount
+  }
 
   // Get previous period for comparison
   let previousStartDate: Date
@@ -108,9 +119,10 @@ export async function getDashboardKPIs(
     console.error('Error fetching products:', productsError)
   }
 
+  // Active Products: count products marked In Stock (override or computed), matching Products tab "In Stock" total
   const activeProducts = products?.filter((p) => {
     const status = ((p.stock_status_override ?? p.stock_status) || '').toUpperCase().trim()
-    return status === 'IN STOCK' && (p.current_stock || 0) > 0
+    return status === 'IN STOCK'
   }).length || 0
 
   // Get net profit metrics (includes expenses)
@@ -132,8 +144,8 @@ export async function getDashboardKPIs(
         percent: prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0,
       },
       orders: {
-        value: totalOrders - prevOrders,
-        percent: prevOrders > 0 ? ((totalOrders - prevOrders) / prevOrders) * 100 : 0,
+        value: billableOrderCount - prevOrders,
+        percent: prevOrders > 0 ? ((billableOrderCount - prevOrders) / prevOrders) * 100 : 0,
       },
       profit: {
         value: totalProfit - prevProfit,
