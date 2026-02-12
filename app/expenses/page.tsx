@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getExpenses, getExpenseCategories, getExpenseSummary, getExpenseGrandTotal } from '@/lib/queries/expenses'
+import { getExpenses, getExpenseCategories, getExpenseSummary, getExpenseGrandTotal, getThisMonthExpenseTotal } from '@/lib/queries/expenses'
 import { getExpenseCategoriesFromLists } from '@/lib/utils/expense-categories'
 import { formatCurrency } from '@/lib/metrics/calculations'
 import Link from 'next/link'
@@ -77,20 +77,22 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   let hasError = false
   let errorMessage = ''
   let grandTotal: { total: number; count: number } = { total: 0, count: 0 }
+  let thisMonthTotal = 0
 
   try {
-    const [expensesResult, categoriesFromDb, expenseSummary, grandTotalRes] = await Promise.all([
+    const [expensesResult, categoriesFromDb, expenseSummary, grandTotalRes, thisMonthRes] = await Promise.all([
       getExpenses(supabase, filters, page, 20, sortBy, sortOrder),
       getExpenseCategories(supabase),
       getExpenseSummary(supabase, filters.dateFrom, filters.dateTo, filters),
       getExpenseGrandTotal(supabase),
+      getThisMonthExpenseTotal(supabase),
     ])
     expensesData = expensesResult
-    // Ensure categories list is never empty so Add Expense dropdown has options
     const defaultCategories = getExpenseCategoriesFromLists()
     const withShipping = defaultCategories.includes('Shipping') ? defaultCategories : ['Shipping', ...defaultCategories]
     categories = categoriesFromDb.length > 0 ? categoriesFromDb : withShipping
     grandTotal = grandTotalRes
+    thisMonthTotal = typeof thisMonthRes === 'number' ? thisMonthRes : 0
   } catch (error) {
     console.error('Error fetching expenses:', error)
     hasError = true
@@ -112,12 +114,9 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
     }
   }
 
-  // Total from grand total (all expenses, all pages); This Month from summary
+  // Total from grand total; This Month from dedicated current-month query
   const totalExpensesAllPages = grandTotal.total
   const totalCount = grandTotal.count
-  const now = new Date()
-  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const thisMonthTotal = expenseSummary?.expensesByMonth?.find((m: any) => m.month === currentMonthKey)?.total ?? 0
   const averageExpense = totalCount > 0 ? totalExpensesAllPages / totalCount : 0
 
   return (

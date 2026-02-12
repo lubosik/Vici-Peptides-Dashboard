@@ -86,6 +86,28 @@ export async function getExpenses(
 }
 
 /**
+ * Get sum of expenses for the current calendar month (server timezone).
+ * Use for "This Month" card on Expenses tab.
+ */
+export async function getThisMonthExpenseTotal(supabase: SupabaseClient): Promise<number> {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() + 1
+  const firstDay = `${year}-${String(month).padStart(2, '0')}-01`
+  const lastDay = new Date(year, month, 0)
+  const lastDayStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('amount')
+    .gte('expense_date', firstDay)
+    .lte('expense_date', lastDayStr)
+
+  if (error) throw error
+  return (data || []).reduce((sum, e) => sum + (Number(e?.amount) ?? 0), 0)
+}
+
+/**
  * Get grand total of all expenses (all pages, no filters). Use for "Total Expenses" card.
  * Fetches amounts with a high limit and sums in code so the total is always correct.
  */

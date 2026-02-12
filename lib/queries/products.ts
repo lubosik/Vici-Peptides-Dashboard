@@ -164,9 +164,9 @@ export async function getProducts(
     salesMap.set(productId, existing)
   })
 
-  // Retail price fallback from order_lines when product.retail_price is 0 or null
+  // Retail price fallback from order_lines when product.retail_price is 0 or null (use ALL lines so we get a price even from excluded-status orders)
   const retailByProductId = new Map<number, number>()
-  salesData?.forEach((line: { product_id: number; customer_paid_per_unit?: number; line_total?: number; qty_ordered?: number }) => {
+  ;(allLines || []).forEach((line: { product_id: number; customer_paid_per_unit?: number; line_total?: number; qty_ordered?: number }) => {
     const pid = line.product_id
     const qty = Number((line as any).qty_ordered) || 1
     const price = Number((line as any).customer_paid_per_unit) || (qty > 0 ? Number((line as any).line_total) / qty : 0) || 0
