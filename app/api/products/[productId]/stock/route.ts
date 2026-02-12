@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { cookies } from 'next/headers'
 
@@ -127,6 +128,9 @@ export async function PATCH(
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    revalidatePath('/')
+    revalidatePath('/products')
 
     return NextResponse.json({
       success: true,

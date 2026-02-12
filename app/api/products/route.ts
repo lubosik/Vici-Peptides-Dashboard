@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 // Force dynamic rendering for API routes
@@ -92,6 +93,8 @@ export async function POST(request: NextRequest) {
         .single()
       
       if (error) throw error
+      revalidatePath('/')
+      revalidatePath('/products')
       return NextResponse.json(data, { status: 200 })
     } else {
       // Insert new
@@ -102,6 +105,8 @@ export async function POST(request: NextRequest) {
         .single()
       
       if (error) throw error
+      revalidatePath('/')
+      revalidatePath('/products')
       return NextResponse.json(data, { status: 201 })
     }
   } catch (error) {
