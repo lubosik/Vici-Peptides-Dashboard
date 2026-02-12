@@ -14,7 +14,6 @@ import { DeleteProductButton } from '@/components/products/delete-product-button
 import { StockStatusToggle } from '@/components/products/stock-status-toggle'
 import { ProductStockQtyInputs } from '@/components/products/product-stock-qty-inputs'
 import { EditableRetailPrice, EditableSalePrice } from '@/components/products/editable-product-price'
-import { RecalculateFromOrdersButton } from '@/components/products/recalculate-from-orders-button'
 import { SyncProductsButton } from '@/components/products/sync-products-button'
 
 // Force dynamic rendering to prevent build-time errors when env vars aren't available
@@ -121,7 +120,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <RecalculateFromOrdersButton />
               <SyncProductsButton />
               <AddProductDialog />
             </div>
@@ -252,8 +250,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                       <TableHead className="text-right">Sale Price</TableHead>
                       <TableHead className="text-right">Our Cost</TableHead>
                       <TableHead className="text-right">Margin</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">Profit</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -324,12 +320,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                         </TableCell>
                         <TableCell className="text-right">
                           {product.margin_percent != null ? formatPercent(product.margin_percent) : '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(product.total_revenue ?? 0)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(product.total_profit ?? 0)}
                         </TableCell>
                         <TableCell className="text-right">
                           <DeleteProductButton
