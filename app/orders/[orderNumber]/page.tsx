@@ -247,10 +247,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                         return (
                           <TableRow key={line.line_id}>
                             <TableCell className="font-medium">
-                              {line.product?.product_name || `Product ${line.product_id}`}
+                              {line.name || line.product?.product_name || `Product ${line.product_id}`}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {line.product?.sku_code || '-'}
+                              {line.sku || line.product?.sku_code || '-'}
                             </TableCell>
                             <TableCell className="text-right">
                               {line.qty_ordered}

@@ -290,6 +290,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Replace all line items for this order so payload is source of truth (no stale rows)
+    if (wooOrderId != null) {
+      await supabase.from('order_lines').delete().eq('order_id', Number(wooOrderId))
+    }
     for (const line of processedLines) {
       const { error: lineError } = await supabase
         .from('order_lines')
@@ -322,6 +326,18 @@ export async function POST(request: NextRequest) {
       profit: orderProfit,
       margin: orderMargin.toFixed(1) + '%',
       line_items_processed: processedLines.length,
+      line_items: processedLines.map((l) => ({
+        id: l.id,
+        name: l.name,
+        product_id: l.product_id,
+        woo_product_id: l.woo_product_id,
+        quantity: l.qty_ordered,
+        unit_price: l.customer_paid_per_unit,
+        total: l.line_total,
+        cost: l.line_cost,
+        profit: l.line_profit,
+        sku: l.sku || undefined,
+      })),
     })
   } catch (error: unknown) {
     console.error('[ORDER WEBHOOK] Fatal error:', error)

@@ -53,8 +53,7 @@ export async function getOrders(
       coupon_discount,
       free_shipping,
       payment_method,
-      created_at,
-      order_lines(count)
+      created_at
     `, { count: 'exact' })
 
   // Apply filters
@@ -90,23 +89,14 @@ export async function getOrders(
 
   if (error) throw error
 
-  // Calculate profit margin and line_items_count (from embedded order_lines(count) or fallback)
+  // Always compute line_items_count from order_lines by order_id (reliable; no embed)
+  const countsByOrderId = new Map<number, number>()
   const ordersWithMargin = (data || []).map((order: any) => {
     const margin = order.order_total > 0
       ? (order.order_profit / order.order_total) * 100
       : 0
-    // Embedded count: order_lines can be number, { count: N }, or [{ count: N }]
-    let line_items_count = 0
-    if (order.order_lines != null) {
-      if (typeof order.order_lines === 'number') line_items_count = order.order_lines
-      else if (Array.isArray(order.order_lines) && order.order_lines.length > 0 && order.order_lines[0]?.count != null)
-        line_items_count = Number(order.order_lines[0].count) || 0
-      else if (typeof order.order_lines === 'object' && 'count' in order.order_lines)
-        line_items_count = Number((order.order_lines as { count: number }).count) || 0
-    }
-    const { order_lines: _drop, ...rest } = order
     return {
-      ...rest,
+      ...order,
       profit_margin: margin,
       order_subtotal: Number(order.order_subtotal) || 0,
       order_total: Number(order.order_total) || 0,
@@ -114,31 +104,26 @@ export async function getOrders(
       shipping_charged: Number(order.shipping_charged) || 0,
       coupon_discount: Number(order.coupon_discount) || 0,
       free_shipping: Boolean(order.free_shipping),
-      line_items_count,
+      line_items_count: 0,
     }
   })
 
-  // Fallback: if embed didn't return counts, fetch from order_lines by order_id
-  const needsCountFallback = ordersWithMargin.length > 0 && ordersWithMargin.every((o) => o.line_items_count === 0)
-  if (needsCountFallback) {
-    const wooIds = ordersWithMargin.map((o) => o.woo_order_id).filter((id): id is number => id != null)
-    if (wooIds.length > 0) {
-      const { data: byId } = await supabase
-        .from('order_lines')
-        .select('order_id')
-        .in('order_id', wooIds)
-      const countsByOrderId = new Map<number, number>()
-      byId?.forEach((line: any) => {
-        const id = Number(line.order_id)
-        countsByOrderId.set(id, (countsByOrderId.get(id) || 0) + 1)
-      })
-      ordersWithMargin.forEach((order) => {
-        if (order.woo_order_id != null) {
-          const n = countsByOrderId.get(Number(order.woo_order_id))
-          if (n != null) order.line_items_count = n
-        }
-      })
-    }
+  const wooIds = ordersWithMargin.map((o) => o.woo_order_id).filter((id): id is number => id != null)
+  if (wooIds.length > 0) {
+    const { data: byId } = await supabase
+      .from('order_lines')
+      .select('order_id')
+      .in('order_id', wooIds)
+    byId?.forEach((line: { order_id: number | null }) => {
+      const id = Number(line.order_id)
+      if (!Number.isNaN(id)) countsByOrderId.set(id, (countsByOrderId.get(id) || 0) + 1)
+    })
+    ordersWithMargin.forEach((order) => {
+      if (order.woo_order_id != null) {
+        const n = countsByOrderId.get(Number(order.woo_order_id))
+        if (n != null) order.line_items_count = n
+      }
+    })
   }
 
   return {
@@ -256,6 +241,8 @@ export async function getOrderWithLines(
       line_profit,
       order_number,
       order_id,
+      name,
+      sku,
       products(product_id, product_name, sku_code)
     `
 
@@ -354,7 +341,7 @@ export async function getOrderWithLines(
       }
     }
     
-    // Ensure all values are plain objects/primitive types
+    // Ensure all values are plain objects/primitive types; prefer line.name (from webhook) for display
     return {
       line_id: Number(line.line_id) || 0,
       product_id: Number(line.product_id) || 0,
@@ -364,6 +351,8 @@ export async function getOrderWithLines(
       line_total: Number(line.line_total) || 0,
       line_cost: Number(line.line_cost) || 0,
       line_profit: Number(line.line_profit) || 0,
+      name: line.name ? String(line.name) : null,
+      sku: line.sku ? String(line.sku) : null,
       product: product && typeof product === 'object' && !Array.isArray(product) ? {
         product_id: Number(product.product_id) || 0,
         product_name: String(product.product_name || ''),
