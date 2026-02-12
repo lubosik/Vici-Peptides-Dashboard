@@ -3,6 +3,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export interface ProductFilters {
   search?: string
@@ -74,6 +75,9 @@ export async function getProducts(
     query = query.eq('stock_status', 'LOW STOCK')
   } else if (filters.outOfStock) {
     query = query.eq('stock_status', 'OUT OF STOCK')
+  } else {
+    // Default: only show products in stock
+    query = query.eq('stock_status', 'In Stock')
   }
 
   // Apply sorting
@@ -101,22 +105,31 @@ export async function getProducts(
     }
   }
 
-  // Get sales data from order_lines (includes qty_ordered for correct variant-level totals)
-  // Join with orders to exclude draft/cancelled orders (no money exchanged)
-  const { data: salesData, error: salesError } = await supabase
+  // Get sales data from order_lines (use admin so we get all rows; then filter by order status)
+  const admin = createAdminClient()
+  const { data: allLines, error: linesError } = await admin
     .from('order_lines')
-    .select(`
-      product_id,
-      qty_ordered,
-      line_total,
-      line_cost,
-      line_profit,
-      orders!inner(order_status)
-    `)
+    .select('product_id, qty_ordered, line_total, line_cost, line_profit, order_number')
     .in('product_id', productIds)
-    .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed")')
 
-  if (salesError) throw salesError
+  if (linesError) throw linesError
+
+  const excludedStatuses = new Set(['checkout-draft', 'cancelled', 'draft', 'refunded', 'failed'])
+  const orderNumbers = [...new Set((allLines || []).map((l: { order_number: string }) => l.order_number))]
+  let orderStatuses: { order_number: string; order_status: string }[] | null = null
+  if (orderNumbers.length > 0) {
+    const res = await admin.from('orders').select('order_number, order_status').in('order_number', orderNumbers)
+    orderStatuses = res.data
+  }
+
+  const statusByOrder = new Map<string, string>()
+  ;(orderStatuses || []).forEach((o) => {
+    statusByOrder.set(o.order_number, o.order_status || '')
+  })
+
+  const salesData = (allLines || []).filter(
+    (line: { order_number: string }) => !excludedStatuses.has(statusByOrder.get(line.order_number) || '')
+  )
 
   // Aggregate sales by product (qty_sold from sum of qty_ordered so variants show correct totals)
   const salesMap = new Map<number, {

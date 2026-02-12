@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
     const orderProfit = orderTotal - totalCost
     const orderMargin = orderTotal > 0 ? (orderProfit / orderTotal) * 100 : 0
 
-    const orderData = {
+    const orderData: Record<string, unknown> = {
       order_number: orderNumberFormatted,
       woo_order_id: wooOrderId != null ? Number(wooOrderId) : null,
       order_date: orderDate,
@@ -326,6 +326,7 @@ export async function POST(request: NextRequest) {
       profit: orderProfit,
       margin: orderMargin.toFixed(1) + '%',
       line_items_processed: processedLines.length,
+      items: processedLines.length,
       line_items: processedLines.map((l) => ({
         id: l.id,
         name: l.name,

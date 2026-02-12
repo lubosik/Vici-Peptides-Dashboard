@@ -111,3 +111,5 @@ curl -X POST https://dashboard.vicipeptides.com/api/webhooks/order \
 
 **Wipe orders (one-time, in Supabase SQL Editor):**  
 Run `supabase/WIPE_ORDERS_AND_LINES.sql` to delete all orders and order_lines (expenses are kept).
+
+**Items column:** The webhook response includes `items` (same as `line_items_processed`). The dashboard Items column is filled from the count of `order_lines` per order (no extra setup). To store the count on the order row, run in Supabase SQL Editor: `ALTER TABLE orders ADD COLUMN IF NOT EXISTS items INTEGER DEFAULT 0;` then redeploy so the webhook can set it.

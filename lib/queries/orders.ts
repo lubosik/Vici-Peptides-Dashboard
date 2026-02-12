@@ -3,6 +3,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export interface OrderFilters {
   status?: string
@@ -110,7 +111,8 @@ export async function getOrders(
 
   const wooIds = ordersWithMargin.map((o) => o.woo_order_id).filter((id): id is number => id != null)
   if (wooIds.length > 0) {
-    const { data: byId } = await supabase
+    const admin = createAdminClient()
+    const { data: byId } = await admin
       .from('order_lines')
       .select('order_id')
       .in('order_id', wooIds)
