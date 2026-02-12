@@ -13,6 +13,7 @@ import { AddProductDialog } from '@/components/products/add-product-dialog'
 import { DeleteProductButton } from '@/components/products/delete-product-button'
 import { StockStatusToggle } from '@/components/products/stock-status-toggle'
 import { ProductStockQtyInputs } from '@/components/products/product-stock-qty-inputs'
+import { EditableRetailPrice, EditableSalePrice } from '@/components/products/editable-product-price'
 import { SyncProductsButton } from '@/components/products/sync-products-button'
 
 // Force dynamic rendering to prevent build-time errors when env vars aren't available
@@ -299,10 +300,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {product.retail_price != null ? formatCurrency(product.retail_price) : '$0.00'}
+                          <EditableRetailPrice
+                            productId={product.product_id}
+                            value={product.retail_price != null ? product.retail_price : null}
+                          />
                         </TableCell>
                         <TableCell className="text-right">
-                          {product.sale_price != null && product.sale_price > 0 ? formatCurrency(product.sale_price) : 'N/A'}
+                          <EditableSalePrice
+                            productId={product.product_id}
+                            value={product.sale_price != null && product.sale_price > 0 ? product.sale_price : null}
+                          />
                         </TableCell>
                         <TableCell className="text-right">
                           {product.our_cost != null ? formatCurrency(product.our_cost) : '$0.00'}
