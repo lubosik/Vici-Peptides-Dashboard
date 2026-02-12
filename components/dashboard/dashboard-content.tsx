@@ -7,7 +7,6 @@ import { RevenueChart } from '@/components/charts/revenue-chart'
 import { NetProfitChart } from '@/components/charts/net-profit-chart'
 import { ExpensesChart } from '@/components/charts/expenses-chart'
 import { formatCurrency, formatPercent } from '@/lib/metrics/calculations'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 interface DashboardContentProps {
   kpis: DashboardKPIs
@@ -22,14 +21,6 @@ export function DashboardContent({
   netProfitData,
   expenseSummary,
 }: DashboardContentProps) {
-  const periodChange = kpis.periodChange
-
-  const TrendIcon = ({ value }: { value: number }) => {
-    if (value > 0) return <TrendingUp className="h-4 w-4 text-green-600" />
-    if (value < 0) return <TrendingDown className="h-4 w-4 text-red-600" />
-    return <Minus className="h-4 w-4 text-gray-400" />
-  }
-
   return (
     <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
       {/* Page Title */}
@@ -58,13 +49,7 @@ export function DashboardContent({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{kpis.totalOrders.toLocaleString()}</div>
-            <div className="flex items-center text-xs text-muted-foreground mt-1">
-              <TrendIcon value={periodChange.orders.percent} />
-              <span className="ml-1">
-                {periodChange.orders.percent > 0 ? '+' : ''}
-                {formatPercent(periodChange.orders.percent)} from last period
-              </span>
-            </div>
+            <p className="text-xs text-muted-foreground mt-1">All time</p>
           </CardContent>
         </Card>
 

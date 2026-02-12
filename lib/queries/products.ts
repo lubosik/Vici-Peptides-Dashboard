@@ -25,10 +25,12 @@ export interface ProductWithSales {
   stock_status: string
   our_cost: number | null
   retail_price: number | null
+  sale_price: number | null
+  /** Price used for revenue/margin/profit: sale_price if set, else retail_price */
+  effective_price: number | null
   unit_margin: number | null
   margin_percent: number | null
   woo_product_id: number | null
-  // Sales-derived metrics
   total_revenue: number
   total_cost: number
   total_profit: number
@@ -176,7 +178,7 @@ export async function getProducts(
     }
   })
 
-  // Combine product data with sales metrics; use product-based revenue/profit/margin formulas
+  // Effective price: sale_price if set, else retail_price, else fallback from order lines. Used for revenue/margin/profit.
   const productsWithSales: ProductWithSales[] = (products || []).map(product => {
     const sales = salesMap.get(product.product_id) || {
       total_revenue: 0,
@@ -188,8 +190,11 @@ export async function getProducts(
     const retail_price = product.retail_price != null && Number(product.retail_price) > 0
       ? Number(product.retail_price)
       : (retailByProductId.get(product.product_id) ?? 0)
+    const sale_price = product.sale_price != null && Number(product.sale_price) > 0 ? Number(product.sale_price) : null
+    const effective_price = sale_price ?? (retail_price > 0 ? retail_price : null)
+    const priceForCalc = effective_price ?? retail_price
     const our_cost = product.our_cost != null ? Number(product.our_cost) : 0
-    const revenue = retail_price * qty_sold
+    const revenue = priceForCalc * qty_sold
     const profit = revenue - our_cost * qty_sold
     const margin_percent = revenue > 0 ? (profit / revenue) * 100 : null
     const roiPercent = sales.total_cost > 0 ? (sales.total_profit / sales.total_cost) * 100 : null
@@ -200,7 +205,9 @@ export async function getProducts(
       current_stock: Number(product.current_stock) || 0,
       our_cost: product.our_cost != null ? Number(product.our_cost) : null,
       retail_price: retail_price > 0 ? retail_price : null,
-      unit_margin: retail_price > 0 && our_cost >= 0 ? retail_price - our_cost : null,
+      sale_price,
+      effective_price: effective_price ?? (retail_price > 0 ? retail_price : null),
+      unit_margin: priceForCalc > 0 && our_cost >= 0 ? priceForCalc - our_cost : null,
       margin_percent: margin_percent != null ? margin_percent : (product.margin_percent ? Number(product.margin_percent) : null),
       total_revenue: revenue,
       total_cost: our_cost * qty_sold,
@@ -251,6 +258,7 @@ export async function getProductById(
       stock_status,
       our_cost,
       retail_price,
+      sale_price,
       unit_margin,
       margin_percent,
       woo_product_id
@@ -301,12 +309,18 @@ export async function getProductById(
     ? (sales.total_profit / sales.total_cost) * 100
     : null
 
+  const retail = product.retail_price ? Number(product.retail_price) : null
+  const sale = product.sale_price != null && Number(product.sale_price) > 0 ? Number(product.sale_price) : null
+  const effective_price = sale ?? retail
+
   return {
     ...product,
     qty_sold: Number(product.qty_sold) || 0,
     current_stock: Number(product.current_stock) || 0,
     our_cost: product.our_cost ? Number(product.our_cost) : null,
-    retail_price: product.retail_price ? Number(product.retail_price) : null,
+    retail_price: retail,
+    sale_price: sale,
+    effective_price,
     unit_margin: product.unit_margin ? Number(product.unit_margin) : null,
     margin_percent: product.margin_percent ? Number(product.margin_percent) : null,
     woo_product_id: product.woo_product_id ? Number(product.woo_product_id) : null,

@@ -12,6 +12,7 @@ import { Search, Package, AlertTriangle, CheckCircle, XCircle, ChevronLeft, Chev
 import { AddProductDialog } from '@/components/products/add-product-dialog'
 import { DeleteProductButton } from '@/components/products/delete-product-button'
 import { StockStatusToggle } from '@/components/products/stock-status-toggle'
+import { ProductStockQtyInputs } from '@/components/products/product-stock-qty-inputs'
 import { SyncProductsButton } from '@/components/products/sync-products-button'
 
 // Force dynamic rendering to prevent build-time errors when env vars aren't available
@@ -243,13 +244,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                       </TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead>Stock Status</TableHead>
-                      <TableHead className="text-right">Current Stock</TableHead>
-                      <TableHead className="text-right">
-                        <Link href={`/products?${new URLSearchParams({ ...searchParams, sortBy: 'qty_sold', sortOrder: sortBy === 'qty_sold' && sortOrder === 'desc' ? 'asc' : 'desc' }).toString()}`}>
-                          Qty Sold
-                        </Link>
-                      </TableHead>
+                      <TableHead className="text-right">Stock / Qty sold</TableHead>
                       <TableHead className="text-right">Retail Price</TableHead>
+                      <TableHead className="text-right">Sale Price</TableHead>
                       <TableHead className="text-right">Our Cost</TableHead>
                       <TableHead className="text-right">Margin</TableHead>
                       <TableHead className="text-right">Revenue</TableHead>
@@ -292,18 +289,20 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          {product.current_stock}
-                          {product.reorder_level && product.current_stock <= product.reorder_level && (
-                            <span className="text-xs text-yellow-600 ml-1">
-                              (reorder: {product.reorder_level})
-                            </span>
+                          <ProductStockQtyInputs
+                            productId={product.product_id}
+                            startingQty={product.starting_qty ?? 0}
+                            qtySold={product.qty_sold ?? 0}
+                          />
+                          {product.reorder_level != null && (product.current_stock ?? 0) <= product.reorder_level && (
+                            <span className="text-xs text-yellow-600 block mt-0.5">reorder: {product.reorder_level}</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {product.qty_sold}
+                          {product.retail_price != null ? formatCurrency(product.retail_price) : '$0.00'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {product.retail_price != null ? formatCurrency(product.retail_price) : '$0.00'}
+                          {product.sale_price != null && product.sale_price > 0 ? formatCurrency(product.sale_price) : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
                           {product.our_cost != null ? formatCurrency(product.our_cost) : '$0.00'}
