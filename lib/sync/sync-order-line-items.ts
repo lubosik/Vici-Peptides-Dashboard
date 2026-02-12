@@ -1,6 +1,7 @@
 /**
  * Server-side sync of order line items from WooCommerce.
- * Used by API route and order detail page so line items always have product_id that exists.
+ * DEPRECATED: Primary data flow is now Make.com → POST /api/webhooks/order → Supabase.
+ * This module is kept for manual "Line items" button on Orders list and one-off scripts.
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'

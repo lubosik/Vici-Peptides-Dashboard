@@ -38,11 +38,22 @@ npm install
 
 ### Development
 
-```bash
-npm run dev
-```
+**Option A – Double‑click (easiest on Mac)**  
+1. In Finder, double‑click **`start-dev-server.command`** in the project folder.  
+2. A Terminal window will open and start the server. **Leave that window open.**  
+3. When you see `✓ Ready`, open [http://localhost:3000](http://localhost:3000) in your browser.
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+**Option B – Terminal**  
+1. Open **Terminal.app** (or iTerm), then run:
+   ```bash
+   cd "/Users/ghost/Downloads/Vici Peptides Dashboard"
+   npm run dev
+   ```
+2. **Keep that terminal window open.** Wait until you see `✓ Ready`.  
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+**If you see "This site can’t be reached" / ERR_CONNECTION_REFUSED:**  
+The dev server is not running. Start it using Option A or B above (do **not** start it from Cursor’s AI/agent). Leave the terminal window open and use [http://localhost:3000](http://localhost:3000).
 
 ### Build
 

@@ -114,7 +114,7 @@ export async function getProducts(
       orders!inner(order_status)
     `)
     .in('product_id', productIds)
-    .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft")')
+    .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed")')
 
   if (salesError) throw salesError
 
@@ -243,7 +243,7 @@ export async function getProductById(
       orders!inner(order_status)
     `)
     .eq('product_id', productId)
-    .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft")')
+    .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed")')
 
   const sales = (salesData || []).reduce(
     (acc, line) => {

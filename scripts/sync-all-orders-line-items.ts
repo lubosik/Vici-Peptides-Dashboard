@@ -1,5 +1,6 @@
 /**
  * Sync ALL orders and their line items from WooCommerce into the dashboard.
+ * DEPRECATED: Data now comes from Make.com webhook (POST /api/webhooks/order). Use this script only for one-off backfills.
  *
  * For each order:
  *  1. GET https://vicipeptides.com/wp-json/wc/v3/orders/<id> (exact API response, no made-up data)

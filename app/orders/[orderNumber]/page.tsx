@@ -50,24 +50,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   console.log(`🔍 Loading order detail page for: ${orderNumber} (original: ${resolvedParams.orderNumber})`)
 
   try {
-    let { order, lineItems } = await getOrderWithLines(supabase, orderNumber)
-
-    // If no line items found and we have a WooCommerce order ID, sync from WooCommerce (ensures products exist)
-    if ((!lineItems || lineItems.length === 0) && order?.order_number && order?.woo_order_id) {
-      try {
-        const { syncOrderLineItemsFromWoo } = await import('@/lib/sync/sync-order-line-items')
-        const result = await syncOrderLineItemsFromWoo(order.order_number)
-        if (result.success && result.line_items_synced > 0) {
-          const refreshed = await getOrderWithLines(supabase, order.order_number)
-          if (refreshed.lineItems?.length) {
-            lineItems = refreshed.lineItems
-            order = refreshed.order
-          }
-        }
-      } catch (syncError) {
-        console.error('Error syncing line items from WooCommerce:', syncError)
-      }
-    }
+    const { order, lineItems } = await getOrderWithLines(supabase, orderNumber)
+    // Data comes from Make.com webhook → Supabase. No auto-sync from WooCommerce on page load.
 
     if (!order) {
       console.error(`Order not found: ${orderNumber}`)
