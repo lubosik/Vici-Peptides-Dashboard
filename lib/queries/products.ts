@@ -331,12 +331,15 @@ export async function getProductById(
 }
 
 /**
- * Get stock status summary
+ * Get stock status summary for Products tab cards.
+ * - In Stock: effective status is In Stock or Low Stock (or unknown); so In Stock + Out of Stock = Total.
+ * - Out of Stock: effective status is Out of Stock.
+ * - Low Stock: current_stock is a number and < 5 (blank/null not counted).
  */
 export async function getStockSummary(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from('products')
-    .select('stock_status, stock_status_override')
+    .select('stock_status, stock_status_override, current_stock')
 
   if (error) throw error
 
@@ -349,9 +352,17 @@ export async function getStockSummary(supabase: SupabaseClient) {
 
   data?.forEach(product => {
     const status = ((product.stock_status_override ?? product.stock_status) || '').toUpperCase().trim()
-    if (status === 'IN STOCK') summary.inStock++
-    else if (status === 'LOW STOCK') summary.lowStock++
-    else if (status === 'OUT OF STOCK') summary.outOfStock++
+    const currentStock = product.current_stock != null ? Number(product.current_stock) : null
+    const hasLowQty = typeof currentStock === 'number' && !Number.isNaN(currentStock) && currentStock < 5
+
+    if (status === 'OUT OF STOCK') {
+      summary.outOfStock++
+    } else {
+      // In Stock includes IN STOCK, LOW STOCK, and any other/empty (so inStock + outOfStock = total)
+      summary.inStock++
+    }
+
+    if (hasLowQty) summary.lowStock++
   })
 
   return summary
