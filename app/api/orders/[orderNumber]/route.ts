@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { WooCommerceClient } from '@/lib/sync/woocommerce-client'
 
@@ -225,6 +226,108 @@ export async function GET(
     console.error('Error fetching order:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch order' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * DELETE /api/orders/[orderNumber]
+ * Deletes the order from Supabase. order_lines are removed by ON DELETE CASCADE.
+ * Dashboard analytics update automatically (they read from orders/order_lines).
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ orderNumber: string }> | { orderNumber: string } }
+) {
+  try {
+    const resolvedParams = params instanceof Promise ? await params : params
+    let orderNumber = resolvedParams.orderNumber
+    try {
+      orderNumber = decodeURIComponent(orderNumber)
+    } catch {
+      // use as-is
+    }
+
+    const supabase = createAdminClient()
+    const raw = orderNumber.trim()
+    const numericId = /^\d+$/.test(raw) ? parseInt(raw, 10) : null
+
+    let order = null
+    if (numericId != null) {
+      const { data } = await supabase
+        .from('orders')
+        .select('order_number')
+        .eq('woo_order_id', numericId)
+        .maybeSingle()
+      if (data) order = data
+    }
+    if (!order) {
+      const formatsToTry = [
+        raw,
+        raw.replace(/%23/g, '#').replace(/%20/g, ' '),
+        raw.startsWith('Order') ? raw : `Order #${raw}`,
+      ]
+      for (const format of Array.from(new Set(formatsToTry))) {
+        const { data } = await supabase
+          .from('orders')
+          .select('order_number')
+          .eq('order_number', format)
+          .maybeSingle()
+        if (data) {
+          order = data
+          break
+        }
+      }
+    }
+    if (!order) {
+      const numberMatch = raw.match(/\d+/)
+      if (numberMatch) {
+        const { data } = await supabase
+          .from('orders')
+          .select('order_number')
+          .eq('woo_order_id', parseInt(numberMatch[0], 10))
+          .maybeSingle()
+        if (data) order = data
+      }
+    }
+
+    if (!order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('order_number', order.order_number)
+
+    if (error) {
+      console.error('Error deleting order:', error)
+      return NextResponse.json(
+        { error: error.message || 'Failed to delete order' },
+        { status: 500 }
+      )
+    }
+
+    try {
+      revalidatePath('/')
+      revalidatePath('/orders')
+      revalidatePath('/analytics')
+      revalidatePath('/revenue')
+      revalidatePath('/products')
+    } catch {
+      // ignore
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message: 'Order deleted. Line items removed (cascade).',
+      order_number: order.order_number,
+    })
+  } catch (error) {
+    console.error('Error in DELETE order:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete order' },
       { status: 500 }
     )
   }

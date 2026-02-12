@@ -136,7 +136,20 @@ export async function POST(request: NextRequest) {
     const customerName = `${billing.first_name || ''} ${billing.last_name || ''}`.trim()
     const customerEmail = billing.email || ''
 
-    const lineItems = Array.isArray(body.line_items) ? body.line_items : []
+    // line_items must be a JSON array. If Make.com sends a single object or string, normalize to array of objects.
+    let lineItems: Record<string, unknown>[] = []
+    if (Array.isArray(body.line_items)) {
+      lineItems = body.line_items.filter((x) => x != null && typeof x === 'object').map((x) => x as Record<string, unknown>)
+    } else if (body.line_items != null && typeof body.line_items === 'object' && !Array.isArray(body.line_items)) {
+      lineItems = [body.line_items as Record<string, unknown>]
+    } else if (typeof body.line_items === 'string') {
+      try {
+        const parsed = JSON.parse(body.line_items) as unknown
+        lineItems = Array.isArray(parsed) ? parsed.filter((x) => x != null && typeof x === 'object').map((x) => x as Record<string, unknown>) : [parsed as Record<string, unknown>]
+      } catch {
+        lineItems = []
+      }
+    }
 
     let totalCost = 0
     const processedLines: Array<{
@@ -157,15 +170,22 @@ export async function POST(request: NextRequest) {
 
     const orderNumberFormatted = orderNumber ? `Order #${orderNumber}` : `Order #${wooOrderId}`
 
-    for (const item of lineItems) {
-      const qty = Number(item.quantity) || 1
+    const usedLineIds = new Set<number>()
+
+    for (let index = 0; index < lineItems.length; index++) {
+      const item = lineItems[index]
+      const qty = Number(item.quantity ?? item.qty) || 1
       const unitPrice =
-        typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0)) || 0
-      const lineTotal = parseFloat(item.total) || unitPrice * qty
-      const productName = String(item.name || '')
-      const productId = Number(item.product_id) || 0
-      const lineItemId = Number(item.id) || 0
-      const sku = String(item.sku || '')
+        typeof item.price === 'number' ? item.price : parseFloat(String(item.price ?? 0)) || 0
+      const lineTotal = parseFloat(String(item.total ?? item.subtotal ?? 0)) || unitPrice * qty
+      const productName = String(item.name ?? item.parentName ?? '').trim()
+      const productId = Number(item.product_id ?? item.productId ?? 0) || 0
+      let lineItemId = Number(item.id ?? item.line_item_id ?? 0)
+      if (lineItemId <= 0 || usedLineIds.has(lineItemId)) {
+        lineItemId = 1000000 + (index + 1)
+      }
+      usedLineIds.add(lineItemId)
+      const sku = String(item.sku ?? '')
 
       const costInfo = await lookupCost(supabase, productName)
       const costPerUnit = costInfo.cost_per_unit

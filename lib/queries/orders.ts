@@ -53,7 +53,8 @@ export async function getOrders(
       coupon_discount,
       free_shipping,
       payment_method,
-      created_at
+      created_at,
+      order_lines(count)
     `, { count: 'exact' })
 
   // Apply filters
@@ -89,57 +90,59 @@ export async function getOrders(
 
   if (error) throw error
 
-  // Calculate profit margin for each order
-  const ordersWithMargin = (data || []).map((order) => ({
-    ...order,
-    profit_margin: order.order_total > 0 
-      ? (order.order_profit / order.order_total) * 100 
-      : 0,
-    order_subtotal: Number(order.order_subtotal) || 0,
-    order_total: Number(order.order_total) || 0,
-    order_profit: Number(order.order_profit) || 0,
-    shipping_charged: Number(order.shipping_charged) || 0,
-    coupon_discount: Number(order.coupon_discount) || 0,
-    free_shipping: Boolean(order.free_shipping),
-  }))
+  // Calculate profit margin and line_items_count (from embedded order_lines(count) or fallback)
+  const ordersWithMargin = (data || []).map((order: any) => {
+    const margin = order.order_total > 0
+      ? (order.order_profit / order.order_total) * 100
+      : 0
+    // Embedded count: order_lines can be number, { count: N }, or [{ count: N }]
+    let line_items_count = 0
+    if (order.order_lines != null) {
+      if (typeof order.order_lines === 'number') line_items_count = order.order_lines
+      else if (Array.isArray(order.order_lines) && order.order_lines.length > 0 && order.order_lines[0]?.count != null)
+        line_items_count = Number(order.order_lines[0].count) || 0
+      else if (typeof order.order_lines === 'object' && 'count' in order.order_lines)
+        line_items_count = Number((order.order_lines as { count: number }).count) || 0
+    }
+    const { order_lines: _drop, ...rest } = order
+    return {
+      ...rest,
+      profit_margin: margin,
+      order_subtotal: Number(order.order_subtotal) || 0,
+      order_total: Number(order.order_total) || 0,
+      order_profit: Number(order.order_profit) || 0,
+      shipping_charged: Number(order.shipping_charged) || 0,
+      coupon_discount: Number(order.coupon_discount) || 0,
+      free_shipping: Boolean(order.free_shipping),
+      line_items_count,
+    }
+  })
 
-  // Get line item counts by order_number and by order_id (woo_order_id) so Items show even if format differs
-  const countsByOrderNumber = new Map<string, number>()
-  const countsByOrderId = new Map<number, number>()
-  if (ordersWithMargin.length > 0) {
-    const orderNumbers = ordersWithMargin.map((o) => o.order_number)
-    const { data: byNumber } = await supabase
-      .from('order_lines')
-      .select('order_number, order_id')
-      .in('order_number', orderNumbers)
-    byNumber?.forEach((line: any) => {
-      countsByOrderNumber.set(line.order_number, (countsByOrderNumber.get(line.order_number) || 0) + 1)
-      if (line.order_id != null)
-        countsByOrderId.set(Number(line.order_id), (countsByOrderId.get(Number(line.order_id)) || 0) + 1)
-    })
+  // Fallback: if embed didn't return counts, fetch from order_lines by order_id
+  const needsCountFallback = ordersWithMargin.length > 0 && ordersWithMargin.every((o) => o.line_items_count === 0)
+  if (needsCountFallback) {
     const wooIds = ordersWithMargin.map((o) => o.woo_order_id).filter((id): id is number => id != null)
     if (wooIds.length > 0) {
       const { data: byId } = await supabase
         .from('order_lines')
         .select('order_id')
         .in('order_id', wooIds)
+      const countsByOrderId = new Map<number, number>()
       byId?.forEach((line: any) => {
         const id = Number(line.order_id)
         countsByOrderId.set(id, (countsByOrderId.get(id) || 0) + 1)
       })
+      ordersWithMargin.forEach((order) => {
+        if (order.woo_order_id != null) {
+          const n = countsByOrderId.get(Number(order.woo_order_id))
+          if (n != null) order.line_items_count = n
+        }
+      })
     }
   }
 
-  const ordersWithCounts = ordersWithMargin.map((order) => ({
-    ...order,
-    line_items_count:
-      countsByOrderNumber.get(order.order_number) ||
-      (order.woo_order_id != null ? countsByOrderId.get(Number(order.woo_order_id)) : 0) ||
-      0,
-  }))
-
   return {
-    orders: ordersWithCounts,
+    orders: ordersWithMargin,
     total: count || 0,
     page,
     pageSize,

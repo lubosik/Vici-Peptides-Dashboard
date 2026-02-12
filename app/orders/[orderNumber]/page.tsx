@@ -8,6 +8,7 @@ import { getOrderWithLines } from '@/lib/queries/orders'
 import { formatCurrency, formatPercent } from '@/lib/metrics/calculations'
 import Link from 'next/link'
 import { ArrowLeft, Package, DollarSign, TrendingUp } from 'lucide-react'
+import { DeleteOrderButton } from '@/components/orders/delete-order-button'
 import { notFound } from 'next/navigation'
 
 interface OrderDetailPageProps {
@@ -110,6 +111,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   </Select>
                   <Button type="submit" className="ml-2">Update Status</Button>
                 </form>
+                <DeleteOrderButton
+                  orderNumber={order.order_number}
+                  wooOrderId={order.woo_order_id ?? undefined}
+                  label={order.order_number}
+                />
               </div>
             </div>
 

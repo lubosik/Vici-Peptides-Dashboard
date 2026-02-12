@@ -67,6 +67,13 @@ So **Make.com sends the API request** to the dashboard; the dashboard does not c
 
 Two entries in `line_items` → two rows in the dashboard for that order, each with its own cost, profit, and margin.
 
+**Critical – valid JSON:** `line_items` **must be a JSON array** (wrapped in square brackets `[ ... ]`). If you send two objects without brackets, the whole request is invalid and you’ll get “not valid JSON” or “Expected double-quoted property name”.
+
+- **Valid:** `"line_items": [ {"id":538,"name":"Bac Water - 10ml",...}, {"id":539,"name":"Retatrutide - 30mg",...} ]`
+- **Invalid:** `"line_items": {"id":538,...}, {"id":539,...}` (no `[ ]`)
+
+In Make.com, map the array from the WooCommerce module (e.g. “Line items” as an array), or ensure your JSON string uses `[ ]` around the list of line items. The webhook accepts both `product_id` and `productId` for each line item.
+
 ---
 
 ## 4. Margin and profit per line item

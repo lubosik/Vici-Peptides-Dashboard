@@ -11,6 +11,7 @@ import { formatCurrency, formatPercent } from '@/lib/metrics/calculations'
 import Link from 'next/link'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { RetrieveLineItemsButton } from '@/components/orders/retrieve-line-items-button'
+import { DeleteOrderButton } from '@/components/orders/delete-order-button'
 
 // Force dynamic rendering to ensure real-time data from Supabase
 export const dynamic = 'force-dynamic'
@@ -241,6 +242,11 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                                 <RetrieveLineItemsButton
                                   orderNumber={order.order_number}
                                   wooOrderId={order.woo_order_id}
+                                />
+                                <DeleteOrderButton
+                                  orderNumber={order.order_number}
+                                  wooOrderId={order.woo_order_id}
+                                  label={order.order_number}
                                 />
                                 <Button variant="ghost" size="sm" asChild>
                                   <Link href={`/orders/${order.woo_order_id != null ? order.woo_order_id : encodeURIComponent(order.order_number)}`}>
