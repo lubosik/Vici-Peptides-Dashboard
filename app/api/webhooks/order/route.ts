@@ -139,13 +139,13 @@ export async function POST(request: NextRequest) {
     // line_items must be a JSON array. If Make.com sends a single object or string, normalize to array of objects.
     let lineItems: Record<string, unknown>[] = []
     if (Array.isArray(body.line_items)) {
-      lineItems = body.line_items.filter((x) => x != null && typeof x === 'object').map((x) => x as Record<string, unknown>)
+      lineItems = body.line_items.filter((x: unknown) => x != null && typeof x === 'object').map((x: unknown) => x as Record<string, unknown>)
     } else if (body.line_items != null && typeof body.line_items === 'object' && !Array.isArray(body.line_items)) {
       lineItems = [body.line_items as Record<string, unknown>]
     } else if (typeof body.line_items === 'string') {
       try {
         const parsed = JSON.parse(body.line_items) as unknown
-        lineItems = Array.isArray(parsed) ? parsed.filter((x) => x != null && typeof x === 'object').map((x) => x as Record<string, unknown>) : [parsed as Record<string, unknown>]
+        lineItems = Array.isArray(parsed) ? parsed.filter((x: unknown) => x != null && typeof x === 'object').map((x: unknown) => x as Record<string, unknown>) : [parsed as Record<string, unknown>]
       } catch {
         lineItems = []
       }
