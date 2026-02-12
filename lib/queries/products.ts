@@ -71,6 +71,7 @@ export async function getProducts(
     query = query.or(`product_name.ilike.%${filters.search}%,sku_code.ilike.%${filters.search}%,variant_strength.ilike.%${filters.search}%`)
   }
 
+  // Stock filter: when set, filter by status; when empty (All Statuses), show all products so out-of-stock can be found and added back
   if (filters.stockStatus) {
     if (filters.stockStatus === 'In Stock') {
       query = query.or('stock_status_override.eq.In Stock,stock_status.eq.In Stock')
@@ -83,10 +84,8 @@ export async function getProducts(
     query = query.eq('stock_status', 'LOW STOCK')
   } else if (filters.outOfStock) {
     query = query.or('stock_status_override.eq.OUT OF STOCK,stock_status.eq.OUT OF STOCK')
-  } else {
-    // Default: only show products in stock (computed or override)
-    query = query.or('stock_status_override.eq.In Stock,stock_status.eq.In Stock')
   }
+  // No stock filter: show all products (in stock, low stock, out of stock) so users can search and add out-of-stock back
 
   // Apply sorting
   query = query.order(sortBy, { ascending: sortOrder === 'asc' })
