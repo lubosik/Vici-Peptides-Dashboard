@@ -247,7 +247,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                       </TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead>Stock Status</TableHead>
-                      <TableHead className="text-right">Stock / Qty sold</TableHead>
+                      <TableHead className="text-right">Current stock / Qty sold</TableHead>
                       <TableHead className="text-right">Retail Price</TableHead>
                       <TableHead className="text-right">Sale Price</TableHead>
                       <TableHead className="text-right">Our Cost</TableHead>
@@ -299,7 +299,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                             qtySold={product.qty_sold ?? 0}
                           />
                           <span className="text-[10px] text-muted-foreground block mt-0.5">
-                            In stock: {Math.max(0, product.current_stock != null ? Number(product.current_stock) : (product.starting_qty ?? 0) - (product.qty_sold ?? 0))}
+                            Stock = on hand now. Qty sold = total sold (can be higher).
                           </span>
                           {product.reorder_level != null && (product.current_stock ?? 0) <= product.reorder_level && (
                             <span className="text-xs text-yellow-600 block mt-0.5">reorder: {product.reorder_level}</span>

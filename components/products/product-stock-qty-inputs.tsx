@@ -6,11 +6,14 @@ import { Input } from '@/components/ui/input'
 
 interface ProductStockQtyInputsProps {
   productId: number
+  /** DB: starting_qty (used to derive current stock for display) */
   startingQty: number
+  /** Total quantity sold (can be higher than current stock) */
   qtySold: number
   className?: string
 }
 
+/** Current stock = on hand now. Qty sold = total sold (often higher than current stock). */
 export function ProductStockQtyInputs({
   productId,
   startingQty,
@@ -18,23 +21,25 @@ export function ProductStockQtyInputs({
   className = '',
 }: ProductStockQtyInputsProps) {
   const router = useRouter()
-  const [stock, setStock] = useState(String(startingQty))
+  const currentStockFromDb = Math.max(0, startingQty - qtySold)
+  const [currentStock, setCurrentStock] = useState(String(currentStockFromDb))
   const [sold, setSold] = useState(String(qtySold))
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    setStock(String(startingQty))
+    setCurrentStock(String(Math.max(0, startingQty - qtySold)))
     setSold(String(qtySold))
   }, [productId, startingQty, qtySold])
 
-  const save = async (newStartingQty: number, newQtySold: number) => {
+  const save = async (newCurrentStock: number, newQtySold: number) => {
     setLoading(true)
     try {
+      const startingQtyToSend = newCurrentStock + newQtySold
       const res = await fetch(`/api/products/${productId}/stock`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          starting_qty: newStartingQty,
+          starting_qty: startingQtyToSend,
           qty_sold: newQtySold,
         }),
       })
@@ -51,34 +56,34 @@ export function ProductStockQtyInputs({
     }
   }
 
-  const onStockBlur = () => {
-    const n = Math.max(0, parseInt(stock, 10) || 0)
+  const onCurrentStockBlur = () => {
+    const c = Math.max(0, parseInt(currentStock, 10) || 0)
     const s = Math.max(0, parseInt(sold, 10) || 0)
-    if (n !== startingQty || s !== qtySold) save(n, s)
+    if (c !== currentStockFromDb || s !== qtySold) save(c, s)
   }
 
   const onSoldBlur = () => {
-    const n = Math.max(0, parseInt(stock, 10) || 0)
+    const c = Math.max(0, parseInt(currentStock, 10) || 0)
     const s = Math.max(0, parseInt(sold, 10) || 0)
-    if (n !== startingQty || s !== qtySold) save(n, s)
+    if (c !== currentStockFromDb || s !== qtySold) save(c, s)
   }
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <div className="flex flex-col gap-0.5">
-        <label className="text-[10px] text-muted-foreground">Stock</label>
+        <label className="text-[10px] text-muted-foreground" title="On hand right now">Current stock</label>
         <Input
           type="number"
           min={0}
           className="h-8 w-16 text-right"
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-          onBlur={onStockBlur}
+          value={currentStock}
+          onChange={(e) => setCurrentStock(e.target.value)}
+          onBlur={onCurrentStockBlur}
           disabled={loading}
         />
       </div>
       <div className="flex flex-col gap-0.5">
-        <label className="text-[10px] text-muted-foreground">Sold</label>
+        <label className="text-[10px] text-muted-foreground" title="Total sold (can be higher than current stock)">Qty sold</label>
         <Input
           type="number"
           min={0}

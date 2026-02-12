@@ -8,13 +8,15 @@ Use this API to set **starting quantity**, **retail price**, and/or **stock stat
 - **URL:** `https://dashboard.vicipeptides.com/api/products/{productId}/stock`
 - **Headers:** `Content-Type: application/json`, `x-api-key: YOUR_WEBHOOK_API_KEY`
 - **Body (JSON):** at least one of:
-  - `starting_qty` (number) – inventory on hand; `current_stock` = `starting_qty` - `qty_sold`
-  - `qty_sold` (number) – override quantity sold (e.g. after manual correction)
+  - `starting_qty` (number) – internal value; dashboard **current stock** (on hand now) = `starting_qty` - `qty_sold`. To set current stock to 20 with 100 sold, send `starting_qty: 120`, `qty_sold: 100`.
+  - `qty_sold` (number) – total quantity sold (often higher than current stock)
   - `retail_price` (number) – regular price
   - `sale_price` (number or `null`) – when set, used for revenue/margin/profit; `null` = N/A (use retail)
   - `stockStatus` (string) – `"In Stock"` or `"OUT OF STOCK"`
 
 Replace `{productId}` with the product’s **product_id** (from the dashboard Products table).
+
+**Dashboard:** "Current stock" = on hand right now. "Qty sold" = total sold (can be higher than current stock). That’s normal.
 
 ## Confirming the right product
 
