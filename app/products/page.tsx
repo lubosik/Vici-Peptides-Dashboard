@@ -116,7 +116,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Products</h1>
               <p className="text-sm sm:text-base text-muted-foreground mt-2">
-                Product inventory and sales (all-time)
+                Product inventory and sales (all-time). Values are saved when you leave each field (tab or click away).
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
+import { Check } from 'lucide-react'
 
 function parsePriceInput(value: string): number | null {
   const n = parseFloat(value.replace(/[$,]/g, ''))
@@ -20,6 +21,7 @@ export function EditableRetailPrice({ productId, value, className = '' }: Editab
   const router = useRouter()
   const [input, setInput] = useState(value != null ? String(value) : '')
   const [loading, setLoading] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     setInput(value != null ? String(value) : '')
@@ -40,6 +42,8 @@ export function EditableRetailPrice({ productId, value, className = '' }: Editab
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'Failed to update')
       }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
       router.refresh()
     } catch (e) {
       console.error(e)
@@ -50,16 +54,19 @@ export function EditableRetailPrice({ productId, value, className = '' }: Editab
   }
 
   return (
-    <Input
-      type="text"
-      inputMode="decimal"
-      className={`h-8 w-20 text-right ${className}`}
-      placeholder="0"
-      value={input}
-      onChange={(e) => setInput(e.target.value)}
-      onBlur={() => save(input)}
-      disabled={loading}
-    />
+    <div className="flex items-center gap-1.5">
+      <Input
+        type="text"
+        inputMode="decimal"
+        className={`h-8 w-20 text-right ${className}`}
+        placeholder="0"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onBlur={() => save(input)}
+        disabled={loading}
+      />
+      {saved && <span className="flex items-center gap-0.5 text-[10px] text-green-600" title="Saved"><Check className="h-3 w-3" /> Saved</span>}
+    </div>
   )
 }
 
@@ -73,6 +80,7 @@ export function EditableSalePrice({ productId, value, className = '' }: Editable
   const router = useRouter()
   const [input, setInput] = useState(value != null && value > 0 ? String(value) : '')
   const [loading, setLoading] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     setInput(value != null && value > 0 ? String(value) : '')
@@ -94,6 +102,8 @@ export function EditableSalePrice({ productId, value, className = '' }: Editable
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'Failed to update')
       }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
       router.refresh()
     } catch (e) {
       console.error(e)
@@ -104,15 +114,18 @@ export function EditableSalePrice({ productId, value, className = '' }: Editable
   }
 
   return (
-    <Input
-      type="text"
-      inputMode="decimal"
-      className={`h-8 w-20 text-right ${className}`}
-      placeholder="N/A"
-      value={input}
-      onChange={(e) => setInput(e.target.value)}
-      onBlur={() => save(input)}
-      disabled={loading}
-    />
+    <div className="flex items-center gap-1.5">
+      <Input
+        type="text"
+        inputMode="decimal"
+        className={`h-8 w-20 text-right ${className}`}
+        placeholder="N/A"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onBlur={() => save(input)}
+        disabled={loading}
+      />
+      {saved && <span className="flex items-center gap-0.5 text-[10px] text-green-600" title="Saved"><Check className="h-3 w-3" /> Saved</span>}
+    </div>
   )
 }

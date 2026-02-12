@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
+import { Check } from 'lucide-react'
 
 interface ProductStockQtyInputsProps {
   productId: number
@@ -25,6 +26,7 @@ export function ProductStockQtyInputs({
   const [currentStock, setCurrentStock] = useState(String(currentStockFromDb))
   const [sold, setSold] = useState(String(qtySold))
   const [loading, setLoading] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     setCurrentStock(String(Math.max(0, startingQty - qtySold)))
@@ -47,6 +49,8 @@ export function ProductStockQtyInputs({
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'Failed to update')
       }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
       router.refresh()
     } catch (e) {
       console.error(e)
@@ -70,6 +74,11 @@ export function ProductStockQtyInputs({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
+      {saved && (
+        <span className="flex items-center gap-1 text-[10px] text-green-600" title="Saved to database">
+          <Check className="h-3 w-3" /> Saved
+        </span>
+      )}
       <div className="flex flex-col gap-0.5">
         <label className="text-[10px] text-muted-foreground" title="On hand right now">Current stock</label>
         <Input
