@@ -14,6 +14,7 @@ import { DeleteProductButton } from '@/components/products/delete-product-button
 import { StockStatusToggle } from '@/components/products/stock-status-toggle'
 import { ProductStockQtyInputs } from '@/components/products/product-stock-qty-inputs'
 import { EditableRetailPrice, EditableSalePrice } from '@/components/products/editable-product-price'
+import { RecalculateFromOrdersButton } from '@/components/products/recalculate-from-orders-button'
 import { SyncProductsButton } from '@/components/products/sync-products-button'
 
 // Force dynamic rendering to prevent build-time errors when env vars aren't available
@@ -119,7 +120,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 Product inventory and sales (all-time)
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <RecalculateFromOrdersButton />
               <SyncProductsButton />
               <AddProductDialog />
             </div>
@@ -291,22 +293,28 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                         </TableCell>
                         <TableCell className="text-right">
                           <ProductStockQtyInputs
+                            key={`stock-${product.product_id}`}
                             productId={product.product_id}
                             startingQty={product.starting_qty ?? 0}
                             qtySold={product.qty_sold ?? 0}
                           />
+                          <span className="text-[10px] text-muted-foreground block mt-0.5">
+                            In stock: {Math.max(0, product.current_stock != null ? Number(product.current_stock) : (product.starting_qty ?? 0) - (product.qty_sold ?? 0))}
+                          </span>
                           {product.reorder_level != null && (product.current_stock ?? 0) <= product.reorder_level && (
                             <span className="text-xs text-yellow-600 block mt-0.5">reorder: {product.reorder_level}</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
                           <EditableRetailPrice
+                            key={`retail-${product.product_id}`}
                             productId={product.product_id}
                             value={product.retail_price != null ? product.retail_price : null}
                           />
                         </TableCell>
                         <TableCell className="text-right">
                           <EditableSalePrice
+                            key={`sale-${product.product_id}`}
                             productId={product.product_id}
                             value={product.sale_price != null && product.sale_price > 0 ? product.sale_price : null}
                           />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 
@@ -21,6 +21,11 @@ export function ProductStockQtyInputs({
   const [stock, setStock] = useState(String(startingQty))
   const [sold, setSold] = useState(String(qtySold))
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setStock(String(startingQty))
+    setSold(String(qtySold))
+  }, [productId, startingQty, qtySold])
 
   const save = async (newStartingQty: number, newQtySold: number) => {
     setLoading(true)

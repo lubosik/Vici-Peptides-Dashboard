@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 
@@ -20,6 +20,10 @@ export function EditableRetailPrice({ productId, value, className = '' }: Editab
   const router = useRouter()
   const [input, setInput] = useState(value != null ? String(value) : '')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setInput(value != null ? String(value) : '')
+  }, [productId, value])
 
   const save = async (raw: string) => {
     const parsed = parsePriceInput(raw)
@@ -69,6 +73,10 @@ export function EditableSalePrice({ productId, value, className = '' }: Editable
   const router = useRouter()
   const [input, setInput] = useState(value != null && value > 0 ? String(value) : '')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setInput(value != null && value > 0 ? String(value) : '')
+  }, [productId, value])
 
   const save = async (raw: string) => {
     const trimmed = raw.trim()
