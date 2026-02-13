@@ -119,10 +119,10 @@ export async function getDashboardKPIs(
     console.error('Error fetching products:', productsError)
   }
 
-  // Active Products: same logic as Products tab "In Stock" — count all not Out of Stock (In Stock, Low Stock, OK, etc.)
+  // Active Products: same as Products tab "In Stock" — count all not Out of Stock (In Stock, Low Stock, OK, etc.)
   const activeProducts = products?.filter((p) => {
-    const status = ((p.stock_status_override ?? p.stock_status) || '').toUpperCase().trim()
-    return status !== 'OUT OF STOCK'
+    const status = ((p.stock_status_override ?? p.stock_status) || '').toUpperCase().trim().replace(/\s+/g, ' ')
+    return status !== 'OUT OF STOCK' && status !== 'OUTOFSTOCK'
   }).length || 0
 
   // Get net profit metrics (includes expenses)

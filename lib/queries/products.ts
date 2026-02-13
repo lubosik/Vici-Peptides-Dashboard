@@ -351,14 +351,15 @@ export async function getStockSummary(supabase: SupabaseClient) {
   }
 
   data?.forEach(product => {
-    const status = ((product.stock_status_override ?? product.stock_status) || '').toUpperCase().trim()
+    const raw = ((product.stock_status_override ?? product.stock_status) || '').toUpperCase().trim().replace(/\s+/g, ' ')
+    const status = raw || ''
+    const isOutOfStock = status === 'OUT OF STOCK' || status === 'OUTOFSTOCK'
     const currentStock = product.current_stock != null ? Number(product.current_stock) : null
     const hasLowQty = typeof currentStock === 'number' && !Number.isNaN(currentStock) && currentStock < 5
 
-    if (status === 'OUT OF STOCK') {
+    if (isOutOfStock) {
       summary.outOfStock++
     } else {
-      // In Stock includes IN STOCK, LOW STOCK, and any other/empty (so inStock + outOfStock = total)
       summary.inStock++
     }
 

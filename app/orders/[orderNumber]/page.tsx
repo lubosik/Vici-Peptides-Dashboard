@@ -97,10 +97,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   const { updateOrderStatus } = await import('@/lib/queries/orders')
                   await updateOrderStatus(supabase, order.order_number, newStatus)
                   
-                  // Revalidate the page to show updated status
+                  // Revalidate so Orders list and Dashboard update in real time
                   const { revalidatePath } = await import('next/cache')
                   revalidatePath(`/orders/${orderNumber}`)
                   revalidatePath('/orders')
+                  revalidatePath('/')
                 }}>
                   <Select name="status" defaultValue={order.order_status} className="w-48">
                     <option value="pending">Pending</option>
