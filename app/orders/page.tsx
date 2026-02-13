@@ -229,17 +229,9 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                               {formatCurrency(order.order_total)}
                             </TableCell>
                             <TableCell className="text-right">
-                              {(order.shipping_cost ?? 0) > 0 ? (
-                                <Link
-                                  href={`/expenses?search=${encodeURIComponent(order.order_number)}`}
-                                  className="text-primary hover:underline"
-                                  title="View in Expenses"
-                                >
-                                  {formatCurrency(order.shipping_cost ?? 0)}
-                                </Link>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
+                              {(order.shipping_cost ?? 0) > 0
+                                ? formatCurrency(order.shipping_cost ?? 0)
+                                : <span className="text-muted-foreground">—</span>}
                             </TableCell>
                             <TableCell className={`text-right ${(order.net_profit ?? order.order_profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {formatCurrency(order.net_profit ?? order.order_profit)}

@@ -9,6 +9,7 @@ import { formatCurrency, formatPercent } from '@/lib/metrics/calculations'
 import Link from 'next/link'
 import { ArrowLeft, Package, DollarSign, TrendingUp } from 'lucide-react'
 import { DeleteOrderButton } from '@/components/orders/delete-order-button'
+import { FetchShippoCostButton } from '@/components/orders/fetch-shippo-cost-button'
 import { notFound } from 'next/navigation'
 
 interface OrderDetailPageProps {
@@ -110,6 +111,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   </Select>
                   <Button type="submit" className="ml-2">Update Status</Button>
                 </form>
+                <FetchShippoCostButton orderNumber={orderNumber} />
                 <DeleteOrderButton
                   orderNumber={order.order_number}
                   wooOrderId={order.woo_order_id ?? undefined}
@@ -196,16 +198,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                       <span className="text-muted-foreground">Cost:</span>
                       <span className="font-medium">{formatCurrency(Number(order.order_cost) || 0)}</span>
                     </div>
-                    {(Number(order.shipping_cost_from_expenses) ?? 0) > 0 && (
+                    {(Number(order.shipping_cost) ?? 0) > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Shipping cost (expenses):</span>
-                        <Link href={`/expenses?search=${encodeURIComponent(order.order_number)}`} className="font-medium text-primary hover:underline">
-                          {formatCurrency(Number(order.shipping_cost_from_expenses) || 0)}
-                        </Link>
+                        <span className="text-muted-foreground">Shipping cost:</span>
+                        <span className="font-medium">{formatCurrency(Number(order.shipping_cost) || 0)}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Profit{order.shipping_cost_from_expenses ? ' (after shipping)' : ''}:</span>
+                      <span className="text-muted-foreground">Profit{(Number(order.shipping_cost) ?? 0) > 0 ? ' (after shipping)' : ''}:</span>
                       <span className={`font-medium ${(order.net_profit ?? order.order_profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatCurrency(Number(order.net_profit ?? order.order_profit) || 0)}
                       </span>
