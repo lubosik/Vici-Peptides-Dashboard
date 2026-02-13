@@ -62,11 +62,11 @@ export async function POST(
     }
 
     // Always send order_number as #<id> (e.g. #2654) for Make.com/Shippo
-    const numericId =
+    const idForWebhook =
       order.woo_order_id != null
         ? String(order.woo_order_id)
         : (order.order_number || '').replace(/^[#\s]*(?:Order\s*#?\s*)?/i, '').trim() || order.order_number
-    const orderNumberForWebhook = numericId ? `#${numericId.replace(/^#/, '')}` : order.order_number
+    const orderNumberForWebhook = idForWebhook ? `#${idForWebhook.replace(/^#/, '')}` : order.order_number
 
     const webhookUrl = process.env.MAKE_COM_SHIPPO_WEBHOOK_URL || 'https://hook.us2.make.com/9l9y4ysr3hcvak6rpf29oej4bi5fuvko'
     const res = await fetch(webhookUrl, {
