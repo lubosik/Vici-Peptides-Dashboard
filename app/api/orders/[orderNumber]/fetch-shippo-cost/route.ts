@@ -61,12 +61,19 @@ export async function POST(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
+    // Always send order_number as #<id> (e.g. #2654) for Make.com/Shippo
+    const numericId =
+      order.woo_order_id != null
+        ? String(order.woo_order_id)
+        : (order.order_number || '').replace(/^[#\s]*(?:Order\s*#?\s*)?/i, '').trim() || order.order_number
+    const orderNumberForWebhook = numericId ? `#${numericId.replace(/^#/, '')}` : order.order_number
+
     const webhookUrl = process.env.MAKE_COM_SHIPPO_WEBHOOK_URL || 'https://hook.us2.make.com/9l9y4ysr3hcvak6rpf29oej4bi5fuvko'
     const res = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        order_number: order.order_number,
+        order_number: orderNumberForWebhook,
         woo_order_id: order.woo_order_id,
         shippo_transaction_object_id: order.shippo_transaction_object_id || undefined,
       }),

@@ -4,6 +4,7 @@
  * Sets shipping_cost on the order; optionally creates an expense (no duplicate).
  * Auth: x-api-key header (WEBHOOK_API_KEY).
  * Body: { order_id?: number, order_number?: string, shipping_cost: number, create_expense?: boolean }
+ * create_expense defaults to true so Expenses tab stays in sync (one expense per order, no duplicates).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       : typeof body.shipping_cost === 'string'
         ? Math.round(parseFloat(body.shipping_cost) * 100) / 100
         : null
-    const createExpense = body.create_expense === true
+    const createExpense = body.create_expense !== false
 
     if (shippingCost == null || shippingCost < 0) {
       return NextResponse.json({ error: 'shipping_cost (number) is required' }, { status: 400 })
@@ -59,6 +60,18 @@ export async function POST(request: NextRequest) {
         .eq('order_number', orderNumber)
         .maybeSingle()
       order = data
+    }
+    // If order_number was sent as #2654, also try matching by woo_order_id (DB has "Order #2654")
+    if (!order && orderNumber && /^#?\d+$/.test(orderNumber.replace(/\s/g, ''))) {
+      const numericId = parseInt(orderNumber.replace(/^#\s*/, ''), 10)
+      if (!Number.isNaN(numericId)) {
+        const { data } = await supabase
+          .from('orders')
+          .select('order_number, woo_order_id')
+          .eq('woo_order_id', numericId)
+          .maybeSingle()
+        order = data
+      }
     }
     if (!order) {
       return NextResponse.json({ error: 'Order not found', order_id: orderId, order_number: orderNumber }, { status: 404 })

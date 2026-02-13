@@ -11,6 +11,7 @@ import { formatCurrency, formatPercent } from '@/lib/metrics/calculations'
 import Link from 'next/link'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { DeleteOrderButton } from '@/components/orders/delete-order-button'
+import { FetchShippoCostButton } from '@/components/orders/fetch-shippo-cost-button'
 
 // Force dynamic rendering to ensure real-time data from Supabase
 export const dynamic = 'force-dynamic'
@@ -243,7 +244,8 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                               {order.line_items_count || 0}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2 justify-end">
+                              <div className="flex items-center gap-2 justify-end flex-wrap">
+                                <FetchShippoCostButton orderNumber={order.order_number} />
                                 <DeleteOrderButton
                                   orderNumber={order.order_number}
                                   wooOrderId={order.woo_order_id}
