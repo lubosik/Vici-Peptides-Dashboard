@@ -128,6 +128,30 @@ export async function getOrders(
     })
   }
 
+  // Shipping cost per order from expenses (Shippo etc.): category='shipping', order_number matches
+  const orderNumbers = ordersWithMargin.map((o) => o.order_number).filter(Boolean)
+  const shippingCostByOrder = new Map<string, number>()
+  if (orderNumbers.length > 0) {
+    const admin = createAdminClient()
+    const { data: shippingExpenses } = await admin
+      .from('expenses')
+      .select('order_number, amount')
+      .eq('category', 'shipping')
+      .in('order_number', orderNumbers)
+    shippingExpenses?.forEach((row: { order_number: string | null; amount: number }) => {
+      if (row.order_number != null) {
+        const current = shippingCostByOrder.get(row.order_number) || 0
+        shippingCostByOrder.set(row.order_number, current + (Number(row.amount) || 0))
+      }
+    })
+  }
+  ordersWithMargin.forEach((order) => {
+    const shippingCost = shippingCostByOrder.get(order.order_number) ?? 0
+    order.shipping_cost = Math.round(shippingCost * 100) / 100
+    order.net_profit = Math.round(((Number(order.order_profit) || 0) - shippingCost) * 100) / 100
+    order.net_margin = order.order_total > 0 ? (order.net_profit / order.order_total) * 100 : 0
+  })
+
   return {
     orders: ordersWithMargin,
     total: count || 0,
@@ -315,18 +339,38 @@ export async function getOrderWithLines(
     }
   }
 
+  // Shipping cost from expenses (Shippo etc.) for this order
+  let shippingCostFromExpenses = 0
+  const admin = createAdminClient()
+  const { data: shippingRows } = await admin
+    .from('expenses')
+    .select('amount')
+    .eq('category', 'shipping')
+    .eq('order_number', actualOrderNumber)
+  shippingRows?.forEach((row: { amount: number }) => {
+    shippingCostFromExpenses += Number(row.amount) || 0
+  })
+  shippingCostFromExpenses = Math.round(shippingCostFromExpenses * 100) / 100
+  const orderProfitNum = Number(order.order_profit) || 0
+  const orderTotalNum = Number(order.order_total) || 0
+  const netProfit = Math.round((orderProfitNum - shippingCostFromExpenses) * 100) / 100
+  const netMargin = orderTotalNum > 0 ? (netProfit / orderTotalNum) * 100 : 0
+
   // Ensure all dates are strings and all data is serializable
   const serializedOrder = {
     ...order,
     order_date: order.order_date ? String(order.order_date) : null,
     created_at: order.created_at ? String(order.created_at) : null,
     updated_at: order.updated_at ? String(order.updated_at) : null,
-    order_total: Number(order.order_total) || 0,
-    order_profit: Number(order.order_profit) || 0,
+    order_total: orderTotalNum,
+    order_profit: orderProfitNum,
     order_subtotal: Number(order.order_subtotal) || 0,
     order_cost: Number(order.order_cost) || 0,
     shipping_charged: Number(order.shipping_charged) || 0,
     shipping_cost: Number(order.shipping_cost) || 0,
+    shipping_cost_from_expenses: shippingCostFromExpenses,
+    net_profit: netProfit,
+    net_margin: netMargin,
     coupon_discount: Number(order.coupon_discount) || 0,
   }
 

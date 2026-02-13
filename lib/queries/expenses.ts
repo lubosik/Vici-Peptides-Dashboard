@@ -53,7 +53,8 @@ export async function getExpenses(
   }
 
   if (filters.search) {
-    query = query.or(`description.ilike.%${filters.search}%,vendor.ilike.%${filters.search}%`)
+    const term = filters.search.trim()
+    query = query.or(`description.ilike.%${term}%,vendor.ilike.%${term}%,order_number.ilike.%${term}%`)
   }
 
   // Apply sorting: newest first (by date, then by id so most recently created is at top)

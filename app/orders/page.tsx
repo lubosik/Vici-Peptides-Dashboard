@@ -184,6 +184,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                           <TableHead>Customer</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Total</TableHead>
+                          <TableHead className="text-right">Shipping cost</TableHead>
                           <TableHead className="text-right">Profit</TableHead>
                           <TableHead className="text-right">Margin</TableHead>
                           <TableHead className="text-right">Items</TableHead>
@@ -227,11 +228,24 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                             <TableCell className="text-right font-medium">
                               {formatCurrency(order.order_total)}
                             </TableCell>
-                            <TableCell className={`text-right ${order.order_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {formatCurrency(order.order_profit)}
+                            <TableCell className="text-right">
+                              {(order.shipping_cost ?? 0) > 0 ? (
+                                <Link
+                                  href={`/expenses?search=${encodeURIComponent(order.order_number)}`}
+                                  className="text-primary hover:underline"
+                                  title="View in Expenses"
+                                >
+                                  {formatCurrency(order.shipping_cost ?? 0)}
+                                </Link>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className={`text-right ${(order.net_profit ?? order.order_profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {formatCurrency(order.net_profit ?? order.order_profit)}
                             </TableCell>
                             <TableCell className="text-right">
-                              {formatPercent(order.profit_margin)}
+                              {formatPercent(order.net_margin ?? order.profit_margin)}
                             </TableCell>
                             <TableCell className="text-right">
                               {order.line_items_count || 0}

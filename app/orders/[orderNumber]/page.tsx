@@ -59,9 +59,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       notFound()
     }
 
-    const profitMargin = order.order_total > 0 
-      ? (order.order_profit / order.order_total) * 100 
-      : 0
+    const profitMargin = order.net_margin ?? (order.order_total > 0 ? (order.order_profit / order.order_total) * 100 : 0)
 
     return (
       <div className="flex min-h-screen bg-background">
@@ -198,10 +196,18 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                       <span className="text-muted-foreground">Cost:</span>
                       <span className="font-medium">{formatCurrency(Number(order.order_cost) || 0)}</span>
                     </div>
+                    {(Number(order.shipping_cost_from_expenses) ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Shipping cost (expenses):</span>
+                        <Link href={`/expenses?search=${encodeURIComponent(order.order_number)}`} className="font-medium text-primary hover:underline">
+                          {formatCurrency(Number(order.shipping_cost_from_expenses) || 0)}
+                        </Link>
+                      </div>
+                    )}
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Profit:</span>
-                      <span className="font-medium text-green-600">
-                        {formatCurrency(Number(order.order_profit) || 0)}
+                      <span className="text-muted-foreground">Profit{order.shipping_cost_from_expenses ? ' (after shipping)' : ''}:</span>
+                      <span className={`font-medium ${(order.net_profit ?? order.order_profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(Number(order.net_profit ?? order.order_profit) || 0)}
                       </span>
                     </div>
                     <div className="flex justify-between">
