@@ -2,11 +2,20 @@
 
 When an order is updated in WooCommerce, you can push **only the new status** to the dashboard so the Orders tab and Dashboard KPIs stay in sync.
 
-## Endpoint
+## Recommended: single URL (no order ID in path)
 
-**PATCH** `https://dashboard.vicipeptides.com/api/orders/{orderId}/status`
+**POST** or **PATCH** `https://dashboard.vicipeptides.com/api/orders/update-status`
 
-- **orderId** = numeric WooCommerce order ID (e.g. `2539`), in the URL path.
+- **URL:** One fixed URL; no dynamic segments.
+- **Body:** `{ "order_id": 2654, "order_status": "completed" }` — pass the numeric order ID and status in the body.
+
+Use this if you get 404 on the path-based endpoint (e.g. after a new deploy or to avoid dynamic URL issues in Make.com).
+
+## Alternative: order ID in path
+
+**PATCH** `https://dashboard.vicipeptides.com/api/orders/{orderNumber}/status`
+
+- **orderNumber** = numeric WooCommerce order ID (e.g. `2539`) in the URL path.
 
 ## Auth
 
@@ -44,23 +53,34 @@ You can use `"status"` instead of `"order_status"` if you prefer; both are accep
 - `checkout-draft`
 - `draft`
 
-## Example (Make.com HTTP module)
+## Example (Make.com HTTP module) — recommended
 
-1. **URL:** `https://dashboard.vicipeptides.com/api/orders/{{woo_order_id}}/status`  
-   (Map `woo_order_id` from “WooCommerce – Get an order” or your trigger.)
-2. **Method:** PATCH  
+1. **URL:** `https://dashboard.vicipeptides.com/api/orders/update-status`  
+   (Single static URL; no order ID in the path.)
+2. **Method:** **POST** or **PATCH**
 3. **Headers:**
    - `Content-Type`: `application/json`
-   - `x-api-key`: your `WEBHOOK_API_KEY` (from Make.com secrets or env)
+   - `x-api-key`: your `WEBHOOK_API_KEY` (from Make.com credentials, e.g. "Dashboard API key")
 4. **Body:**
 
 ```json
 {
-  "order_status": "{{woo_order_status}}"
+  "order_id": "{{2.ID}}",
+  "order_status": "{{6.Status}}"
 }
 ```
 
-Map `woo_order_status` from WooCommerce (e.g. `completed`, `processing`, `cancelled`). Use lowercase.
+Map:
+- `order_id` from your WooCommerce module (e.g. **2. ID** — the numeric order ID).
+- `order_status` from the status field (e.g. **6. Status**). Use lowercase values: `completed`, `processing`, `cancelled`, etc.
+
+This avoids 404s from dynamic URLs and works as soon as the dashboard is deployed.
+
+## Troubleshooting (404 Not Found)
+
+- **Use the static URL:** Prefer **POST** `https://dashboard.vicipeptides.com/api/orders/update-status` with body `{ "order_id": ..., "order_status": ... }`. No order ID in the path, so no 404 from wrong or unmapped path.
+- **If you use the path-based URL** (`/api/orders/2654/status`): Remove any spaces; use the **mapped** numeric order ID, not the label "Object ID". Ensure the latest dashboard code is **deployed** (the route was added recently).
+- **API key:** Add header `x-api-key` with your `WEBHOOK_API_KEY` (e.g. "Dashboard API key" in Make.com); otherwise you get 401.
 
 ## Response
 
