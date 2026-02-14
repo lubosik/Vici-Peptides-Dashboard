@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { getTodayInMiami } from '@/lib/datetime'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
@@ -39,7 +40,7 @@ export async function POST(
     const results: Array<{ lineId: number; expenseId?: number; status: string; error?: string }> = []
 
     for (const line of lines) {
-      const expenseDate = line.expense_date || new Date().toISOString().split('T')[0]
+      const expenseDate = line.expense_date || getTodayInMiami()
       const amount = typeof line.amount === 'string' ? parseFloat(line.amount) : Number(line.amount)
       if (isNaN(amount) || amount <= 0) {
         results.push({ lineId: line.id, status: 'error', error: 'Invalid amount' })

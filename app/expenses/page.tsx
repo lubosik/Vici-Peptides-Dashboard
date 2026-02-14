@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getExpenses, getExpenseCategories, getExpenseSummary, getExpenseGrandTotal, getThisMonthExpenseTotal } from '@/lib/queries/expenses'
 import { getExpenseCategoriesFromLists } from '@/lib/utils/expense-categories'
 import { formatCurrency } from '@/lib/metrics/calculations'
+import { formatDateInMiami } from '@/lib/datetime'
 import Link from 'next/link'
 import { Plus, Search, Download, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
 import { ExpensesChart } from '@/components/charts/expenses-chart'
@@ -293,7 +294,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                       {expensesData.expenses.map((expense: any) => (
                         <TableRow key={expense.expense_id}>
                           <TableCell>
-                            {new Date(expense.expense_date).toLocaleDateString()}
+                            {formatDateInMiami(expense.expense_date)}
                           </TableCell>
                           <TableCell>
                             <span className="px-2 py-1 rounded text-xs bg-muted">

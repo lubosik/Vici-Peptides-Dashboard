@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { useDemoStore } from '@/lib/demo/store'
 import { isDemoMode } from '@/lib/demo/mode'
+import { getTodayInMiami } from '@/lib/datetime'
 
 interface AddExpenseDialogProps {
   categories: string[]
@@ -97,7 +98,7 @@ export function AddExpenseDialog({ categories }: AddExpenseDialogProps) {
                 name="expense_date"
                 type="date"
                 required
-                defaultValue={new Date().toISOString().split('T')[0]}
+                defaultValue={getTodayInMiami()}
                 className="bg-input/50 border-border/50"
               />
             </div>

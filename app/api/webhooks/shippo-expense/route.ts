@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getTodayInMiami } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     const { data: expense, error } = await supabase
       .from('expenses')
       .insert({
-        expense_date: expenseDate || new Date().toISOString().split('T')[0],
+        expense_date: expenseDate || getTodayInMiami(),
         category: 'Shipping',
         description:
           description ||

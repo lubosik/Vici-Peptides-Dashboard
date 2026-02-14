@@ -9,6 +9,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { getTodayInMiami } from '@/lib/datetime'
 import { ShippoClient, ShippoOrdersListResponse } from './client'
 
 /** Normalize Shippo order_number to match our DB format. We use "Order #1068", Shippo uses "#1068". */
@@ -171,7 +172,7 @@ export async function syncShippingCostsFromShippoOrders(
           ? new Date(order.placed_at).toISOString().split('T')[0]
           : ourOrder.order_date
             ? new Date(ourOrder.order_date).toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0]
+            : getTodayInMiami()
 
         const expenseData = {
           expense_date: expenseDate,

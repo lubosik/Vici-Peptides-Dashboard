@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { getOrders, getOrderStatuses } from '@/lib/queries/orders'
 import { formatCurrency, formatPercent } from '@/lib/metrics/calculations'
+import { formatDateInMiami } from '@/lib/datetime'
 import Link from 'next/link'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { DeleteOrderButton } from '@/components/orders/delete-order-button'
@@ -205,7 +206,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                             </TableCell>
                             <TableCell>
                               {order.order_date 
-                                ? new Date(order.order_date).toLocaleDateString()
+                                ? formatDateInMiami(order.order_date)
                                 : 'N/A'}
                             </TableCell>
                             <TableCell>

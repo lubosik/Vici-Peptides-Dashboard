@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getTodayInMiami } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
 
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
         const { error: insertErr } = await supabase
           .from('expenses')
           .insert({
-            expense_date: new Date().toISOString().split('T')[0],
+            expense_date: getTodayInMiami(),
             category: 'shipping',
             description: `Shipping cost for ${order.order_number}`,
             vendor: 'Shippo',

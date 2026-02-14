@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { getOrders } from '@/lib/queries/orders'
 import { formatCurrency, formatPercent } from '@/lib/metrics/calculations'
+import { formatDateInMiami } from '@/lib/datetime'
 import Link from 'next/link'
 import { Download, Search, Filter } from 'lucide-react'
 
@@ -296,7 +297,7 @@ export default async function RevenuePage({ searchParams }: RevenuePageProps) {
                             </Link>
                           </TableCell>
                           <TableCell>
-                            {new Date(order.order_date).toLocaleDateString()}
+                            {formatDateInMiami(order.order_date)}
                           </TableCell>
                           <TableCell>
                             <div>

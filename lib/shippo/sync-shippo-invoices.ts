@@ -5,6 +5,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { getTodayInMiami } from '@/lib/datetime'
 import { ShippoClient } from './client'
 
 export interface SyncShippoInvoicesResult {
@@ -55,7 +56,7 @@ export async function syncShippoInvoicesFromApi(
       )
       const expenseDate = inv.invoice_paid_date
         ? inv.invoice_paid_date.split('T')[0]
-        : new Date().toISOString().split('T')[0]
+        : getTodayInMiami()
 
       const { error } = await supabase.from('expenses').insert({
         expense_date: expenseDate,

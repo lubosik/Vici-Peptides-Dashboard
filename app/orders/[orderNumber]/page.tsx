@@ -6,6 +6,7 @@ import { Select } from '@/components/ui/select'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getOrderWithLines } from '@/lib/queries/orders'
 import { formatCurrency, formatPercent } from '@/lib/metrics/calculations'
+import { formatDateTimeInMiami } from '@/lib/datetime'
 import Link from 'next/link'
 import { ArrowLeft, Package, DollarSign, TrendingUp } from 'lucide-react'
 import { DeleteOrderButton } from '@/components/orders/delete-order-button'
@@ -82,7 +83,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   </h1>
                   <p className="text-muted-foreground mt-2">
                     {order.order_date 
-                      ? new Date(order.order_date).toLocaleString()
+                      ? formatDateTimeInMiami(order.order_date)
                       : 'No date'}
                   </p>
                 </div>

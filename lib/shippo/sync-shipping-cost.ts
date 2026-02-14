@@ -4,6 +4,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { getTodayInMiami } from '@/lib/datetime'
 import { createShippoClient, ShippoClient, ShippoError } from './client'
 import { buildShippoAddress, buildShippoParcels, fetchWooCommerceProducts } from './parcel-builder'
 
@@ -251,7 +252,7 @@ async function syncFromWooCommerceOrder(params: {
     // Upsert shipping expense (idempotent)
     const expenseDate = wooOrder.date_created 
       ? new Date(wooOrder.date_created).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0]
+      : getTodayInMiami()
 
     const expenseData = {
       expense_date: expenseDate,

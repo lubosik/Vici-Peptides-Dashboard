@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatDateShortInMiami } from '@/lib/datetime'
 
 interface NetProfitData {
   date: string
@@ -26,7 +27,7 @@ interface NetProfitChartProps {
 export function NetProfitChart({ data }: NetProfitChartProps) {
   // Format data for chart
   const chartData = data.map((item) => ({
-    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: formatDateShortInMiami(item.date),
     revenue: item.revenue,
     expenses: item.expenses,
     netProfit: item.netProfit,
