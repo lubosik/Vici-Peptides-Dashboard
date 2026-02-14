@@ -1,10 +1,10 @@
 /**
  * POST /api/webhooks/order-shipping-cost
  * Make.com calls this after fetching Shippo label cost for an order.
- * Sets shipping_cost on the order; optionally creates an expense (no duplicate).
+ * Always overwrites the order's shipping_cost (whether there's a value already or not).
+ * Optionally creates or updates the shipping expense for that order (one per order, amount updated on re-fetch).
  * Auth: x-api-key header (WEBHOOK_API_KEY).
  * Body: { order_id?: number, order_number?: string, shipping_cost: number, create_expense?: boolean }
- * create_expense defaults to true so Expenses tab stays in sync (one expense per order, no duplicates).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order not found', order_id: orderId, order_number: orderNumber }, { status: 404 })
     }
 
+    // Always overwrite the order's shipping cost (whether there's a value already or not)
     const { error: updateError } = await supabase
       .from('orders')
       .update({
@@ -99,7 +100,14 @@ export async function POST(request: NextRequest) {
         .eq('category', 'shipping')
         .limit(1)
 
-      if (!existingList?.length) {
+      if (existingList?.length) {
+        // Update existing expense so re-fetch overwrites wrong cost on dashboard
+        await supabase
+          .from('expenses')
+          .update({ amount: shippingCost })
+          .eq('order_number', order.order_number)
+          .eq('category', 'shipping')
+      } else {
         const { error: insertErr } = await supabase
           .from('expenses')
           .insert({
