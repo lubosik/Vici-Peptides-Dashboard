@@ -1,9 +1,9 @@
 /**
- * Dashboard timezone: America/Miami (Eastern).
- * All "today" dates and date display use Miami so the client sees correct dates.
+ * Dashboard timezone: America/New_York (Eastern).
+ * All "today" dates and date display use this timezone so the client sees correct dates.
  */
 
-const TIMEZONE = 'America/Miami'
+const TIMEZONE = 'America/New_York'
 
 /**
  * Returns today's date in Miami as YYYY-MM-DD (for storing expense_date, etc.).
