@@ -27,6 +27,9 @@ export async function POST(
       return NextResponse.json({ error: 'Missing order number' }, { status: 400 })
     }
 
+    const body = await request.json().catch(() => ({}))
+    const webhookChoice = body.webhook === 'manual' ? 'manual' : 'default'
+
     const supabase = createAdminClient()
     const numericId = /^\d+$/.test(orderNumber) ? parseInt(orderNumber, 10) : null
 
@@ -68,7 +71,10 @@ export async function POST(
         : (order.order_number || '').replace(/^[#\s]*(?:Order\s*#?\s*)?/i, '').trim() || order.order_number
     const orderNumberForWebhook = idForWebhook ? `#${idForWebhook.replace(/^#/, '')}` : order.order_number
 
-    const webhookUrl = process.env.MAKE_COM_SHIPPO_WEBHOOK_URL || 'https://hook.us2.make.com/9l9y4ysr3hcvak6rpf29oej4bi5fuvko'
+    const webhookUrl =
+      webhookChoice === 'manual'
+        ? 'https://hook.us2.make.com/yhggpvigk0aslw76ivek9vwyuh8neolo'
+        : process.env.MAKE_COM_SHIPPO_WEBHOOK_URL || 'https://hook.us2.make.com/9l9y4ysr3hcvak6rpf29oej4bi5fuvko'
     const res = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
