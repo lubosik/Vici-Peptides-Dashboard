@@ -52,7 +52,7 @@ export async function getSalesReportFromDb(
     .select('order_total, order_subtotal, shipping_charged, coupon_discount, order_status, order_number, woo_order_id')
     .gte('order_date', dateFrom)
     .lt('order_date', dateTo)
-    .not('order_status', 'in', '("checkout-draft","cancelled","draft")')
+    .not('order_status', 'in', '("checkout-draft","cancelled","draft","on-hold")')
 
   if (error) throw error
 
@@ -102,7 +102,7 @@ export async function getTopSellersFromDb(
     .select('order_number, woo_order_id')
     .gte('order_date', dateFrom)
     .lt('order_date', dateTo)
-    .not('order_status', 'in', '("checkout-draft","cancelled","draft")')
+    .not('order_status', 'in', '("checkout-draft","cancelled","draft","on-hold")')
 
   const orderNumbers = (orders || []).map((o: any) => o.order_number).filter(Boolean)
   const orderIds = (orders || []).map((o: any) => o.woo_order_id).filter(Boolean)

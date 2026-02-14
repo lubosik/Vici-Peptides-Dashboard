@@ -34,7 +34,7 @@ export async function getNetProfitMetrics(
   const { data: orders, error: ordersError } = await supabase
     .from('orders')
     .select('order_total')
-    .not('order_status', 'in', '("checkout-draft","cancelled","draft")')
+    .not('order_status', 'in', '("checkout-draft","cancelled","draft","on-hold")')
     .gte('order_date', startDate)
     .lte('order_date', endDate)
 
@@ -101,7 +101,7 @@ export async function getNetProfitOverTime(
   const { data: orders, error: ordersError } = await supabase
     .from('orders')
     .select('order_date, order_total')
-    .not('order_status', 'in', '("checkout-draft","cancelled","draft")')
+    .not('order_status', 'in', '("checkout-draft","cancelled","draft","on-hold")')
     .gte('order_date', startDate.toISOString())
     .order('order_date', { ascending: true })
 

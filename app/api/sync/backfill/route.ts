@@ -19,7 +19,7 @@ export async function POST() {
         qty_ordered,
         orders!inner(order_status)
       `)
-      .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft")')
+      .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft","on-hold")')
 
     if (linesError) {
       return NextResponse.json({ error: linesError.message }, { status: 500 })

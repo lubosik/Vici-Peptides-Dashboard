@@ -106,6 +106,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   <Select name="status" defaultValue={order.order_status} className="w-48">
                     <option value="pending">Pending</option>
                     <option value="processing">Processing</option>
+                    <option value="on-hold">On hold</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                     <option value="refunded">Refunded</option>
@@ -141,6 +142,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
                       order.order_status === 'completed' ? 'bg-green-100 text-green-800' :
                       order.order_status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                      order.order_status === 'on-hold' ? 'bg-amber-100 text-amber-800' :
                       order.order_status === 'cancelled' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>

@@ -121,7 +121,7 @@ export async function getProducts(
 
   if (linesError) throw linesError
 
-  const excludedStatuses = new Set(['checkout-draft', 'cancelled', 'draft', 'refunded', 'failed'])
+  const excludedStatuses = new Set(['checkout-draft', 'cancelled', 'draft', 'refunded', 'failed', 'on-hold'])
   const orderNumbers = [...new Set((allLines || []).map((l: { order_number: string }) => l.order_number))]
   let orderStatuses: { order_number: string; order_status: string }[] | null = null
   if (orderNumbers.length > 0) {
@@ -285,7 +285,7 @@ export async function getProductById(
       orders!inner(order_status)
     `)
     .eq('product_id', productId)
-    .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed")')
+    .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed","on-hold")')
 
   const sales = (salesData || []).reduce(
     (acc, line) => {

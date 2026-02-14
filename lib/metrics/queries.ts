@@ -50,7 +50,7 @@ export async function getDashboardKPIs(
   let ordersQuery = supabase
     .from('orders')
     .select('order_total, order_profit, order_date, order_status')
-    .not('order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed")')
+    .not('order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed","on-hold")')
   
   if (period !== 'all') {
     ordersQuery = ordersQuery.gte('order_date', startDate.toISOString())
@@ -102,7 +102,7 @@ export async function getDashboardKPIs(
   const { data: previousPeriod } = await supabase
     .from('orders')
     .select('order_total, order_profit')
-    .not('order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed")')
+    .not('order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed","on-hold")')
     .gte('order_date', previousStartDate.toISOString())
     .lt('order_date', previousEndDate.toISOString())
 
@@ -168,6 +168,7 @@ export async function getRevenueOverTime(
   const { data: orders, error } = await supabase
     .from('orders')
     .select('order_date, order_total, order_profit')
+    .not('order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed","on-hold")')
     .gte('order_date', startDate.toISOString())
     .order('order_date', { ascending: true })
 
@@ -274,7 +275,7 @@ export async function getTopProducts(
     const { data: ordersInRange } = await supabase
       .from('orders')
       .select('order_number')
-      .not('order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed")')
+      .not('order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed","on-hold")')
       .gte('order_date', dateRange.from)
       .lte('order_date', dateRange.to)
     orderNumbers = (ordersInRange || []).map((o) => o.order_number)
@@ -293,7 +294,7 @@ export async function getTopProducts(
       order_number,
       orders!inner(order_status)
     `)
-    .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed")')
+    .not('orders.order_status', 'in', '("checkout-draft","cancelled","draft","refunded","failed","on-hold")')
 
   if (orderNumbers && orderNumbers.length > 0) {
     orderLinesQuery = orderLinesQuery.in('order_number', orderNumbers)

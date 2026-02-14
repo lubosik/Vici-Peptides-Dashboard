@@ -221,6 +221,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                               <span className={`px-2 py-1 rounded text-xs ${
                                 order.order_status === 'completed' ? 'bg-green-500/20 text-green-400' :
                                 order.order_status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
+                                order.order_status === 'on-hold' ? 'bg-amber-500/20 text-amber-400' :
                                 order.order_status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
                                 'bg-muted text-muted-foreground'
                               }`}>
