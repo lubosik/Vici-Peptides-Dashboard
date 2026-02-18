@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { upsertAffiliateExpenseForOrder } from '@/lib/expenses/affiliate-expense'
 
 function authenticate(request: NextRequest): boolean {
   const key = request.headers.get('x-api-key') || request.nextUrl.searchParams.get('api_key')
@@ -306,6 +307,15 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    // Affiliate expense: if order used a coupon, create/update a 10% affiliate payment expense
+    await upsertAffiliateExpenseForOrder(supabase, {
+      order_number: orderNumberFormatted,
+      woo_order_id: wooOrderId != null ? Number(wooOrderId) : null,
+      order_total: orderTotal,
+      coupon_discount: discountTotal,
+      coupon_code: (orderData.coupon_code as string | null) ?? null,
+    })
 
     try {
       revalidatePath('/')
