@@ -137,6 +137,12 @@ export async function POST(request: NextRequest) {
     const customerName = `${billing.first_name || ''} ${billing.last_name || ''}`.trim()
     const customerEmail = billing.email || ''
 
+    // Coupon code (WooCommerce: coupon_lines[].code). Some automations may send coupon_code directly.
+    const couponCode =
+      (Array.isArray(body.coupon_lines) && body.coupon_lines[0]?.code ? String(body.coupon_lines[0].code) : '') ||
+      (typeof body.coupon_code === 'string' ? body.coupon_code : '') ||
+      null
+
     // line_items must be a JSON array. If Make.com sends a single object or string, normalize to array of objects.
     let lineItems: Record<string, unknown>[] = []
     if (Array.isArray(body.line_items)) {
@@ -268,7 +274,7 @@ export async function POST(request: NextRequest) {
       customer_email: customerEmail || null,
       currency,
       notes: customerNote || null,
-      coupon_code: null,
+      coupon_code: couponCode,
     }
 
     const { error: orderError } = await supabase

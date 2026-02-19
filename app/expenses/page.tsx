@@ -280,6 +280,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                         <TableHead>Category</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead>Vendor</TableHead>
+                        <TableHead>Coupon</TableHead>
                         <TableHead>Order</TableHead>
                         <TableHead>Source</TableHead>
                         <TableHead className="text-right">
@@ -306,6 +307,11 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {expense.vendor || '-'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {String(expense.category || '').toLowerCase() === 'affiliate' && expense.coupon_code
+                              ? expense.coupon_code
+                              : <span className="text-muted-foreground">—</span>}
                           </TableCell>
                           <TableCell>
                             {expense.order_number ? (

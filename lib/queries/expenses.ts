@@ -72,10 +72,40 @@ export async function getExpenses(
 
   if (error) throw error
 
-  const expenses = (data || []).map((expense) => ({
-    ...expense,
-    amount: Number(expense.amount) || 0,
-  }))
+  const parseMetadata = (value: unknown): any => {
+    if (value == null) return null
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value)
+      } catch {
+        return null
+      }
+    }
+    if (typeof value === 'object') return value
+    return null
+  }
+
+  const expenses = (data || []).map((expense: any) => {
+    const metadata = parseMetadata(expense.metadata)
+
+    let coupon_code: string | null = null
+    if (String(expense.category || '').toLowerCase() === 'affiliate') {
+      coupon_code =
+        (metadata && typeof metadata.coupon_code === 'string' && metadata.coupon_code.trim()) ||
+        null
+      if (!coupon_code && typeof expense.description === 'string') {
+        const m = expense.description.match(/\(coupon\s+([^)]+)\)/i)
+        coupon_code = m?.[1]?.trim() || null
+      }
+    }
+
+    return {
+      ...expense,
+      amount: Number(expense.amount) || 0,
+      metadata: metadata ?? expense.metadata,
+      coupon_code,
+    }
+  })
 
   return {
     expenses,
