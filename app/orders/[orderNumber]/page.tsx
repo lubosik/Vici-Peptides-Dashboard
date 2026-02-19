@@ -10,7 +10,6 @@ import { formatDateTimeInMiami } from '@/lib/datetime'
 import Link from 'next/link'
 import { ArrowLeft, Package, DollarSign, TrendingUp } from 'lucide-react'
 import { DeleteOrderButton } from '@/components/orders/delete-order-button'
-import { FetchShippoCostButton } from '@/components/orders/fetch-shippo-cost-button'
 import { notFound } from 'next/navigation'
 
 interface OrderDetailPageProps {
@@ -113,7 +112,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   </Select>
                   <Button type="submit" className="ml-2">Update Status</Button>
                 </form>
-                <FetchShippoCostButton orderNumber={orderNumber} />
                 <DeleteOrderButton
                   orderNumber={order.order_number}
                   wooOrderId={order.woo_order_id ?? undefined}

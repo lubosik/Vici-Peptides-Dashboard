@@ -111,4 +111,4 @@ Shippo’s **Orders API** returns orders with an `order_number` (e.g. `#2654`) t
 
 ## 5. Env (optional)
 
-- **`MAKE_COM_SHIPPO_WEBHOOK_URL`** – URL of your Make.com webhook. Used when you click **Fetch from Shippo** on an order.
+- **Note:** The "Fetch from Shippo" button has been removed. Use Zapier (or Make.com) to trigger the flow.
