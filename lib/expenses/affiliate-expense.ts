@@ -66,6 +66,7 @@ export async function upsertAffiliateExpenseForOrder(
         description,
         vendor: 'Affiliate',
         source: 'affiliate_auto',
+        metadata: coupon_code ? { coupon_code } : null,
       })
       .eq('expense_id', expenseId)
 

@@ -15,6 +15,53 @@ function authenticate(request: NextRequest): boolean {
   return key === process.env.WEBHOOK_API_KEY
 }
 
+/** Get value from object by key or common aliases (case-insensitive) */
+function getBodyValue(body: Record<string, unknown>, ...keys: string[]): unknown {
+  const keySet = new Set(keys.map((k) => k.toLowerCase()))
+  for (const [k, v] of Object.entries(body)) {
+    if (v != null && keySet.has(k.toLowerCase())) return v
+  }
+  return undefined
+}
+
+/** Build line_items array from comma-separated Zapier fields */
+function buildLineItemsFromCommaSeparated(body: Record<string, unknown>): Record<string, unknown>[] {
+  const getStr = (...keys: string[]) => {
+    const v = getBodyValue(body, ...keys)
+    if (v == null) return ''
+    return String(v).trim()
+  }
+  const names = getStr('Line Items Name', 'line_items_name').split(',').map((s) => s.trim()).filter(Boolean)
+  const quantities = getStr('Line Items Quantity', 'line_items_quantity').split(',').map((s) => s.trim()).filter(Boolean)
+  const skus = getStr('Line Items Sku', 'line_items_sku').split(',').map((s) => s.trim()).filter(Boolean)
+  const totals = getStr('Line Items Total', 'line_items_total').split(',').map((s) => s.trim()).filter(Boolean)
+  const subtotals = getStr('Line Items Subtotal', 'line_items_subtotal').split(',').map((s) => s.trim()).filter(Boolean)
+  const productIds = getStr('Line Items Product Id', 'line_items_product_id').split(',').map((s) => s.trim()).filter(Boolean)
+  if (names.length === 0) return []
+
+  const count = names.length
+  const items: Record<string, unknown>[] = []
+  for (let i = 0; i < count; i++) {
+    const qty = parseInt(quantities[i] || '1', 10) || 1
+    const total = parseFloat(totals[i] || subtotals[i] || '0') || 0
+    const subtotal = parseFloat(subtotals[i] || totals[i] || '0') || total
+    const unitPrice = qty > 0 ? total / qty : 0
+    items.push({
+      id: 1000000 + (i + 1),
+      name: names[i] || '',
+      quantity: qty,
+      qty,
+      sku: skus[i] || '',
+      total,
+      subtotal,
+      price: unitPrice,
+      product_id: parseInt(productIds[i] || '0', 10) || 0,
+      productId: parseInt(productIds[i] || '0', 10) || 0,
+    })
+  }
+  return items
+}
+
 async function lookupCost(
   supabase: SupabaseClient,
   productName: string
@@ -133,17 +180,21 @@ export async function POST(request: NextRequest) {
       orderDate = new Date().toISOString()
     }
 
-    const billing = body.billing || {}
-    const customerName = `${billing.first_name || ''} ${billing.last_name || ''}`.trim()
-    const customerEmail = billing.email || ''
+    // Billing: object (billing.first_name) or flattened (Billing_first_name, Billing_last_name, Billing_email)
+    const billing = (body.billing as Record<string, unknown>) || {}
+    const customerName =
+      `${billing.first_name || getBodyValue(body, 'Billing_first_name', 'billing_first_name') || ''} ${billing.last_name || getBodyValue(body, 'Billing_last_name', 'billing_last_name') || ''}`.trim()
+    const customerEmail =
+      String(billing.email || getBodyValue(body, 'Billing_email', 'billing_email') || '').trim() || ''
 
-    // Coupon code (WooCommerce: coupon_lines[].code). Some automations may send coupon_code directly.
+    // Coupon code: WooCommerce coupon_lines, or top-level Coupon/coupon_code
     const couponCode =
-      (Array.isArray(body.coupon_lines) && body.coupon_lines[0]?.code ? String(body.coupon_lines[0].code) : '') ||
+      (Array.isArray(body.coupon_lines) && body.coupon_lines[0]?.code ? String((body.coupon_lines[0] as { code?: string }).code) : '') ||
+      (typeof body.Coupon === 'string' ? body.Coupon : '') ||
       (typeof body.coupon_code === 'string' ? body.coupon_code : '') ||
       null
 
-    // line_items must be a JSON array. If Make.com sends a single object or string, normalize to array of objects.
+    // line_items: JSON array, OR comma-separated Zapier fields (Line Items Name, Line Items Quantity, etc.)
     let lineItems: Record<string, unknown>[] = []
     if (Array.isArray(body.line_items)) {
       lineItems = body.line_items.filter((x: unknown) => x != null && typeof x === 'object').map((x: unknown) => x as Record<string, unknown>)
@@ -156,6 +207,9 @@ export async function POST(request: NextRequest) {
       } catch {
         lineItems = []
       }
+    }
+    if (lineItems.length === 0) {
+      lineItems = buildLineItemsFromCommaSeparated(body)
     }
 
     let totalCost = 0
