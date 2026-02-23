@@ -222,6 +222,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                                 order.order_status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
                                 order.order_status === 'on-hold' ? 'bg-amber-500/20 text-amber-400' :
                                 order.order_status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                                order.order_status === 'refunded' ? 'bg-violet-500/20 text-violet-400' :
                                 'bg-muted text-muted-foreground'
                               }`}>
                                 {order.order_status}

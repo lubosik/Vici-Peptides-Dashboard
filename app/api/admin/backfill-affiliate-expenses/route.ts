@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { upsertAffiliateExpenseForOrder } from '@/lib/expenses/affiliate-expense'
-import { EXCLUDED_ORDER_STATUSES } from '@/lib/queries/order-filters'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
+
+/** Exclude only draft/checkout-draft from affiliate backfill. Cancelled/on-hold still get affiliate expense. */
+const BACKFILL_EXCLUDED_STATUSES = new Set(['checkout-draft', 'draft'])
 
 /**
  * POST /api/admin/backfill-affiliate-expenses
  *
  * Create/update affiliate expenses (10% of order_total) for all existing orders
- * that used a coupon (coupon_discount > 0), excluding draft/cancelled/on-hold/etc.
+ * that used a coupon (coupon_discount > 0). Includes cancelled orders (affiliate 10% still applies).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -31,13 +33,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const excluded = new Set(EXCLUDED_ORDER_STATUSES.map((s) => s.toLowerCase()))
     let created = 0
     let updated = 0
 
     for (const order of orders || []) {
       const status = (order.order_status as string | null | undefined)?.toLowerCase() ?? ''
-      if (excluded.has(status)) continue
+      if (BACKFILL_EXCLUDED_STATUSES.has(status)) continue
 
       const result = await upsertAffiliateExpenseForOrder(supabase, {
         order_number: order.order_number as string,

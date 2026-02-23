@@ -142,6 +142,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                       order.order_status === 'processing' ? 'bg-blue-100 text-blue-800' :
                       order.order_status === 'on-hold' ? 'bg-amber-100 text-amber-800' :
                       order.order_status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                      order.order_status === 'refunded' ? 'bg-violet-100 text-violet-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
                       {order.order_status}

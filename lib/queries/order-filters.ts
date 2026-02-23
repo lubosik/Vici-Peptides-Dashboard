@@ -5,9 +5,9 @@
 
 /**
  * Order statuses that should be excluded from revenue/profit calculations
- * These are orders where no money has been exchanged
+ * (draft/cancelled/on-hold = no money; refunded = money returned)
  */
-export const EXCLUDED_ORDER_STATUSES = ['checkout-draft', 'cancelled', 'draft', 'on-hold'] as const
+export const EXCLUDED_ORDER_STATUSES = ['checkout-draft', 'cancelled', 'draft', 'on-hold', 'refunded'] as const
 
 /**
  * Check if an order status should be excluded from revenue/profit calculations
