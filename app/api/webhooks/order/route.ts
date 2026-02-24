@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { upsertAffiliateExpenseForOrder } from '@/lib/expenses/affiliate-expense'
+import { matchProductToCatalog } from '@/lib/catalog/vici-products'
 
 function authenticate(request: NextRequest): boolean {
   const key = request.headers.get('x-api-key') || request.nextUrl.searchParams.get('api_key')
@@ -236,9 +237,9 @@ export async function POST(request: NextRequest) {
     for (let index = 0; index < lineItems.length; index++) {
       const item = lineItems[index]
       const qty = Number(item.quantity ?? item.qty) || 1
-      const unitPrice =
+      let unitPrice =
         typeof item.price === 'number' ? item.price : parseFloat(String(item.price ?? 0)) || 0
-      const lineTotal = parseFloat(String(item.total ?? item.subtotal ?? 0)) || unitPrice * qty
+      let lineTotal = parseFloat(String(item.total ?? item.subtotal ?? 0)) || unitPrice * qty
       const productName = String(item.name ?? item.parentName ?? '').trim()
       const productId = Number(item.product_id ?? item.productId ?? 0) || 0
       let lineItemId = Number(item.id ?? item.line_item_id ?? 0)
@@ -246,7 +247,17 @@ export async function POST(request: NextRequest) {
         lineItemId = 1000000 + (index + 1)
       }
       usedLineIds.add(lineItemId)
-      const sku = String(item.sku ?? '')
+      let sku = String(item.sku ?? '').trim()
+
+      // Fallback: if Zapier didn't send price or SKU, fill from Vici product catalog
+      const catalogMatch = productName ? matchProductToCatalog(productName) : null
+      if (catalogMatch) {
+        if (!unitPrice || unitPrice <= 0 || !lineTotal || lineTotal <= 0) {
+          unitPrice = catalogMatch.price
+          lineTotal = Math.round(catalogMatch.price * qty * 100) / 100
+        }
+        if (!sku) sku = catalogMatch.sku
+      }
 
       const costInfo = await lookupCost(supabase, productName)
       const costPerUnit = costInfo.cost_per_unit
@@ -309,16 +320,22 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const orderProfit = orderTotal - totalCost
-    const orderMargin = orderTotal > 0 ? (orderProfit / orderTotal) * 100 : 0
+    // Use sum of line totals (catalog-corrected) so dashboard always shows correct revenue
+    const orderSubtotalFromLines = processedLines.reduce((s, l) => s + (Number(l.line_total) || 0), 0)
+    const effectiveOrderTotal =
+      Math.round((orderSubtotalFromLines - discountTotal + shippingTotal) * 100) / 100 ||
+      orderTotal
+
+    const orderProfit = effectiveOrderTotal - totalCost
+    const orderMargin = effectiveOrderTotal > 0 ? (orderProfit / effectiveOrderTotal) * 100 : 0
 
     const orderData: Record<string, unknown> = {
       order_number: orderNumberFormatted,
       woo_order_id: wooOrderId != null ? Number(wooOrderId) : null,
       order_date: orderDate,
       order_status: orderStatus,
-      order_subtotal: orderTotal - (parseFloat(body.shipping_total) || 0) + (parseFloat(body.discount_total) || 0),
-      order_total: orderTotal,
+      order_subtotal: Math.round(orderSubtotalFromLines * 100) / 100,
+      order_total: effectiveOrderTotal,
       order_product_cost: totalCost,
       order_cost: totalCost,
       order_profit: orderProfit,
@@ -391,7 +408,7 @@ export async function POST(request: NextRequest) {
       status: 'success',
       order_number: orderNumberFormatted,
       woo_order_id: wooOrderId,
-      total: orderTotal,
+      total: effectiveOrderTotal,
       cost: totalCost,
       profit: orderProfit,
       margin: orderMargin.toFixed(1) + '%',
