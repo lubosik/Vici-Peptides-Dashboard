@@ -1,5 +1,5 @@
 /**
- * One-time backfill: set correct prices and SKUs on order_lines for orders 2874–2948
+ * Backfill: set correct prices and SKUs on order_lines for orders in a range
  * (WooCommerce→Zapier didn't send price/SKU). Uses Vici product catalog to match
  * line item names to price + SKU, then recalculates order totals.
  */
@@ -12,14 +12,14 @@ import { matchProductToCatalog } from '@/lib/catalog/vici-products'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-const WOO_ORDER_ID_MIN = 2874
-const WOO_ORDER_ID_MAX = 2948
+const WOO_ORDER_ID_MIN = 2950
+const WOO_ORDER_ID_MAX = 999999
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = createAdminClient()
 
-    // Orders in range 2874–2948 (by woo_order_id)
+    // Orders in range (by woo_order_id)
     const { data: orders, error: ordersErr } = await supabase
       .from('orders')
       .select('order_number, woo_order_id, order_subtotal, order_total, order_cost, order_profit, coupon_discount, shipping_charged, shipping_cost')
