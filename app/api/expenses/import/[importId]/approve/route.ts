@@ -5,6 +5,51 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
+/** Normalize vendor/description for duplicate matching (lowercase, trim, collapse spaces) */
+function normalizeForMatch(s: string | null | undefined): string {
+  return (s || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+}
+
+/** Check if an expense with same date, amount, and vendor/description already exists (duplicate).
+ * Recurring payments (e.g. monthly subscriptions) have different dates so they won't match. */
+async function isDuplicateExpense(
+  supabase: ReturnType<typeof createAdminClient>,
+  expenseDate: string,
+  amount: number,
+  vendor: string,
+  description: string
+): Promise<boolean> {
+  const dateStr = expenseDate.split('T')[0]
+  const amountTolerance = 0.01
+
+  const { data: existing } = await supabase
+    .from('expenses')
+    .select('expense_id, amount, vendor, description')
+    .eq('expense_date', dateStr)
+
+  if (!existing?.length) return false
+
+  const normVendor = normalizeForMatch(vendor)
+  const normDesc = normalizeForMatch(description)
+
+  for (const e of existing) {
+    const existingAmount = Number(e.amount) || 0
+    if (Math.abs(existingAmount - amount) > amountTolerance) continue
+
+    const existingVendor = normalizeForMatch(e.vendor)
+    const existingDesc = normalizeForMatch(e.description)
+
+    // Match: same amount + (same vendor OR same/similar description)
+    if (normVendor && existingVendor && normVendor === existingVendor) return true
+    if (normDesc && existingDesc && (normDesc === existingDesc || normDesc.includes(existingDesc) || existingDesc.includes(normDesc)))
+      return true
+  }
+  return false
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ importId: string }> }
@@ -44,6 +89,26 @@ export async function POST(
       const amount = typeof line.amount === 'string' ? parseFloat(line.amount) : Number(line.amount)
       if (isNaN(amount) || amount <= 0) {
         results.push({ lineId: line.id, status: 'error', error: 'Invalid amount' })
+        continue
+      }
+
+      const vendor = line.vendor || ''
+      const description = line.description || ''
+
+      // Skip duplicates (recurring payments have different dates, so they're allowed)
+      const duplicate = await isDuplicateExpense(
+        supabase,
+        expenseDate,
+        amount,
+        vendor,
+        description
+      )
+      if (duplicate) {
+        await supabase
+          .from('expense_import_lines')
+          .update({ rejected: true })
+          .eq('id', line.id)
+        results.push({ lineId: line.id, status: 'duplicate', error: 'Already exists in expenses' })
         continue
       }
 

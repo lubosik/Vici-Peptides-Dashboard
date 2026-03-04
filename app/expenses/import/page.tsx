@@ -119,11 +119,27 @@ export default function ExpenseImportPage() {
       const approvedIds = new Set(
         (data.results || []).filter((r: any) => r.status === 'approved').map((r: any) => r.lineId)
       )
-      setLines((prev) =>
-        prev.map((l) => (approvedIds.has(l.id) ? { ...l, approved: true } : l))
+      const duplicateIds = new Set(
+        (data.results || []).filter((r: any) => r.status === 'duplicate').map((r: any) => r.lineId)
       )
-      if (lineIdsToApprove === 'all' && approvedIds.size > 0) {
-        alert(`Approved ${approvedIds.size} expense(s)`)
+      setLines((prev) =>
+        prev.map((l) =>
+          approvedIds.has(l.id)
+            ? { ...l, approved: true }
+            : duplicateIds.has(l.id)
+              ? { ...l, rejected: true }
+              : l
+        )
+      )
+      if (lineIdsToApprove === 'all') {
+        const dupCount = duplicateIds.size
+        if (approvedIds.size > 0 || dupCount > 0) {
+          const msg =
+            dupCount > 0
+              ? `Approved ${approvedIds.size} expense(s), skipped ${dupCount} duplicate(s)`
+              : `Approved ${approvedIds.size} expense(s)`
+          alert(msg)
+        }
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Approve failed'

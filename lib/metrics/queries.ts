@@ -13,6 +13,7 @@ export interface DashboardKPIs {
   profitMargin: number
   averageOrderValue: number
   activeProducts: number
+  totalGrossProfit: number
   totalExpenses: number
   netProfit: number
   netProfitMargin: number
@@ -135,6 +136,7 @@ export async function getDashboardKPIs(
     profitMargin,
     averageOrderValue,
     activeProducts,
+    totalGrossProfit: netProfitMetrics.totalGrossProfit,
     totalExpenses: netProfitMetrics.totalExpenses,
     netProfit: netProfitMetrics.netProfit,
     netProfitMargin: netProfitMetrics.netProfitMargin,

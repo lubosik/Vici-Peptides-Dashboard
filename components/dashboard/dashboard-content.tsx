@@ -94,7 +94,8 @@ export function DashboardContent({
               Margin: {formatPercent(kpis.netProfitMargin)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Revenue: {formatCurrency(kpis.totalRevenue)} - Expenses: {formatCurrency(kpis.totalExpenses)}
+              Gross Profit: {formatCurrency(kpis.totalGrossProfit)} - Expenses:{' '}
+              {formatCurrency(kpis.totalExpenses)}
             </p>
           </CardContent>
         </Card>
