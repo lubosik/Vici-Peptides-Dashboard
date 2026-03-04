@@ -1,14 +1,12 @@
 /**
  * Net profit calculations
- * Net Profit = Total Gross Profit - Total Operating Expenses
- * (per docs/calculations.md: Gross Profit = Revenue - Product Cost - Shipping Absorbed)
+ * Net Profit = Total Revenue - Total Expenses
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
 
 export interface NetProfitMetrics {
   totalRevenue: number
-  totalGrossProfit: number
   totalExpenses: number
   netProfit: number
   netProfitMargin: number
@@ -31,11 +29,11 @@ export async function getNetProfitMetrics(
   const startDate = dateFrom || new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const endDate = dateTo || now.toISOString()
 
-  // Get orders for revenue and gross profit
+  // Get total revenue from orders
   // Exclude checkout-draft and cancelled orders (no money exchanged)
   const { data: orders, error: ordersError } = await supabase
     .from('orders')
-    .select('order_total, order_profit')
+    .select('order_total')
     .not('order_status', 'in', '("checkout-draft","cancelled","draft","on-hold","refunded")')
     .gte('order_date', startDate)
     .lte('order_date', endDate)
@@ -47,13 +45,7 @@ export async function getNetProfitMetrics(
     0
   )
 
-  // Total Gross Profit = sum of order_profit (Revenue - Product Cost - Shipping Absorbed)
-  const totalGrossProfit = (orders || []).reduce(
-    (sum, o) => sum + (Number(o.order_profit) || 0),
-    0
-  )
-
-  // Get total expenses (operating expenses; supply costs are included here)
+  // Get total expenses
   const { data: expenses, error: expensesError } = await supabase
     .from('expenses')
     .select('amount')
@@ -67,18 +59,17 @@ export async function getNetProfitMetrics(
     0
   )
 
-  // Net Profit = Gross Profit - Operating Expenses (per docs)
-  const netProfit = totalGrossProfit - totalExpenses
+  // Calculate net profit
+  const netProfit = totalRevenue - totalExpenses
 
-  // Net profit margin as percentage of revenue
+  // Calculate net profit margin (as percentage of revenue)
   const netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
-  // Expense ratio (expenses as percentage of revenue)
+  // Calculate expense ratio (expenses as percentage of revenue)
   const expenseRatio = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0
 
   return {
     totalRevenue,
-    totalGrossProfit,
     totalExpenses,
     netProfit,
     netProfitMargin,
@@ -125,16 +116,11 @@ export async function getNetProfitOverTime(
 
   if (expensesError) throw expensesError
 
-  // Group orders by date (revenue and gross profit)
+  // Group orders by date
   const revenueByDate = new Map<string, number>()
-  const grossProfitByDate = new Map<string, number>()
   orders?.forEach((order) => {
     const date = new Date(order.order_date).toISOString().split('T')[0]
     revenueByDate.set(date, (revenueByDate.get(date) || 0) + (Number(order.order_total) || 0))
-    grossProfitByDate.set(
-      date,
-      (grossProfitByDate.get(date) || 0) + (Number(order.order_profit) || 0)
-    )
   })
 
   // Group expenses by date
@@ -144,7 +130,7 @@ export async function getNetProfitOverTime(
     expensesByDate.set(date, (expensesByDate.get(date) || 0) + (Number(expense.amount) || 0))
   })
 
-  // Combine and fill missing dates (net profit = gross profit - expenses)
+  // Combine and fill missing dates
   const result: Array<{
     date: string
     revenue: number
@@ -158,9 +144,8 @@ export async function getNetProfitOverTime(
   while (currentDate <= endDate) {
     const dateStr = currentDate.toISOString().split('T')[0]
     const revenue = revenueByDate.get(dateStr) || 0
-    const grossProfit = grossProfitByDate.get(dateStr) || 0
     const expenses = expensesByDate.get(dateStr) || 0
-    const netProfit = grossProfit - expenses
+    const netProfit = revenue - expenses
 
     result.push({
       date: dateStr,
