@@ -163,22 +163,8 @@ export async function POST() {
     }
   }
 
-  // Trigger full recalculation
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000'
-
-  let recalcResult: any = null
-  try {
-    const r = await fetch(`${baseUrl}/api/sync/recalculate-costs`, { method: 'POST' })
-    recalcResult = await r.json()
-  } catch {
-    recalcResult = { error: 'Could not auto-trigger recalculate — call it manually' }
-  }
-
   revalidatePath('/products')
   revalidatePath('/')
-  revalidatePath('/orders')
 
   return NextResponse.json({
     success: true,
@@ -187,6 +173,6 @@ export async function POST() {
     updated,
     not_found_list: notFound,
     skipped,
-    recalculate: recalcResult,
+    next_step: 'Now click Recalculate Costs to backfill all order profits',
   })
 }

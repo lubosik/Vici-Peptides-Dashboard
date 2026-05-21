@@ -105,8 +105,7 @@ export async function POST() {
   }
 
   let updatedOrders = 0
-  const orderUpdateChunks: Array<{ woo_order_id: number; order_cost: number; order_product_cost: number; order_profit: number }>[] = []
-  const orderUpdateList = []
+  const orderUpdateList: Array<{ woo_order_id: number; order_cost: number; order_product_cost: number; order_profit: number }> = []
 
   for (const [orderId, totals] of orderCosts) {
     const order = orderMap.get(orderId)
