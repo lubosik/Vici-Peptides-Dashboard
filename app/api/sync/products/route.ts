@@ -58,44 +58,44 @@ export async function POST(request: NextRequest) {
     let errors = 0
 
     for (const product of allProducts) {
+      // Skip variable parent products — stock lives on variations, not the parent
+      const isVariable = product.type === 'variable'
+
       const wooCost = extractCostFromMeta(product.meta_data)
       const { data: existing } = await supabase
         .from('products')
-        .select('our_cost')
+        .select('product_id, our_cost, starting_qty, reorder_level, stock_status_override')
         .eq('woo_product_id', product.id)
         .maybeSingle()
       const ourCost = wooCost ?? existing?.our_cost ?? null
 
-      const stockQty = product.stock_quantity != null ? Math.max(0, parseInt(String(product.stock_quantity), 10) || 0) : null
-      const { error } = await supabase
-        .from('products')
-        .upsert(
-          {
-            product_id: product.id,
-            woo_product_id: product.id,
-            product_name: product.name || `Product ${product.id}`,
-            sku_code: product.sku || null,
-            retail_price: parseFloat(product.regular_price || product.price || '0') || null,
-            our_cost: ourCost,
-            current_stock: stockQty,
-            stock_status:
-              product.stock_status === 'instock'
-                ? 'In Stock'
-                : product.stock_status === 'onbackorder'
-                  ? 'LOW STOCK'
-                  : 'OUT OF STOCK',
-            qty_sold: Math.max(0, parseInt(product.total_sales || '0', 10) || 0),
-          },
-          { onConflict: 'woo_product_id' }
-        )
+      // For variable products, don't store at parent level — go straight to variations
+      if (!isVariable) {
+        const stockQty = product.stock_quantity != null ? Math.max(0, parseInt(String(product.stock_quantity), 10) || 0) : null
+        const wooStockStatus = product.stock_status === 'instock' ? 'In Stock' : product.stock_status === 'onbackorder' ? 'LOW STOCK' : 'OUT OF STOCK'
+        const upsertRow: Record<string, unknown> = {
+          product_id: product.id,
+          woo_product_id: product.id,
+          product_name: product.name || `Product ${product.id}`,
+          sku_code: product.sku || null,
+          retail_price: parseFloat(product.regular_price || product.price || '0') || null,
+          our_cost: ourCost,
+          qty_sold: Math.max(0, parseInt(product.total_sales || '0', 10) || 0),
+        }
+        // Only set stock fields if no manual override
+        if (!existing?.stock_status_override) upsertRow.stock_status = wooStockStatus
+        if (stockQty !== null) upsertRow.current_stock = stockQty
 
-      if (error) {
-        console.error(`Product sync error for ${product.name}:`, error.message)
-        errors++
-        continue
+        const { error } = await supabase.from('products').upsert(upsertRow, { onConflict: 'woo_product_id' })
+        if (error) {
+          // Fallback: try upsert on product_id in case woo_product_id not yet set
+          const { error: e2 } = await supabase.from('products').upsert({ ...upsertRow }, { onConflict: 'product_id' })
+          if (e2) { console.error(`Product sync error for ${product.name}:`, e2.message); errors++; continue }
+        }
+        synced++
       }
-      synced++
 
+      // Always sync variations for variable products (this is where real stock/prices live)
       if (product.type === 'variable') {
         try {
           const variationList = await wooClient.fetchAllVariations(product.id)
@@ -108,36 +108,36 @@ export async function POST(request: NextRequest) {
             const varCost = extractCostFromMeta(variation.meta_data)
             const { data: existingVar } = await supabase
               .from('products')
-              .select('our_cost')
+              .select('product_id, our_cost, stock_status_override')
               .eq('woo_product_id', variation.id)
               .maybeSingle()
             const varOurCost = varCost ?? existingVar?.our_cost ?? ourCost ?? null
-
             const varStockQty = variation.stock_quantity != null ? Math.max(0, parseInt(String(variation.stock_quantity), 10) || 0) : null
-            const { error: varErr } = await supabase
-              .from('products')
-              .upsert(
-                {
-                  product_id: variation.id,
-                  woo_product_id: variation.id,
-                  product_name: varName,
-                  sku_code: variation.sku || null,
-                  retail_price:
-                    parseFloat(variation.regular_price || variation.price || '0') || null,
-                  our_cost: varOurCost,
-                  current_stock: varStockQty,
-                  stock_status:
-                    variation.stock_status === 'instock'
-                      ? 'In Stock'
-                      : variation.stock_status === 'onbackorder'
-                        ? 'LOW STOCK'
-                        : 'OUT OF STOCK',
-                  qty_sold: Math.max(0, parseInt(variation.total_sales || '0', 10) || 0),
-                },
-                { onConflict: 'woo_product_id' }
-              )
-            if (!varErr) variations++
-            else console.error(`Variation sync error for ${varName}:`, varErr.message)
+            const varStockStatus = variation.stock_status === 'instock'
+              ? (varStockQty !== null && varStockQty <= 5 && varStockQty > 0 ? 'LOW STOCK' : 'In Stock')
+              : variation.stock_status === 'onbackorder' ? 'LOW STOCK' : 'OUT OF STOCK'
+
+            const varRow: Record<string, unknown> = {
+              product_id: variation.id,
+              woo_product_id: variation.id,
+              product_name: varName,
+              sku_code: variation.sku || null,
+              retail_price: parseFloat(variation.regular_price || variation.price || '0') || null,
+              our_cost: varOurCost,
+              qty_sold: Math.max(0, parseInt(variation.total_sales || '0', 10) || 0),
+            }
+            if (!existingVar?.stock_status_override) varRow.stock_status = varStockStatus
+            if (varStockQty !== null) varRow.current_stock = varStockQty
+
+            const { error: varErr } = await supabase.from('products').upsert(varRow, { onConflict: 'woo_product_id' })
+            if (!varErr) {
+              variations++
+            } else {
+              // Try product_id conflict fallback
+              const { error: varErr2 } = await supabase.from('products').upsert(varRow, { onConflict: 'product_id' })
+              if (!varErr2) variations++
+              else console.error(`Variation sync error for ${varName}:`, varErr2.message)
+            }
           }
         } catch (e) {
           console.warn(`Could not fetch variations for product ${product.id}:`, e)

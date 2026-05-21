@@ -1,4 +1,5 @@
 import { Sidebar } from '@/components/sidebar'
+import { Header } from '@/components/header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
@@ -81,56 +82,52 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     }
   }
 
+  const STOCK_CFG: Record<string, { dot: string; bg: string; text: string; icon: typeof CheckCircle }> = {
+    'In Stock':    { dot: 'bg-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/40',  text: 'text-emerald-700 dark:text-emerald-400', icon: CheckCircle },
+    'LOW STOCK':   { dot: 'bg-amber-500',   bg: 'bg-amber-50 dark:bg-amber-950/40',      text: 'text-amber-700 dark:text-amber-400',     icon: AlertTriangle },
+    'OUT OF STOCK':{ dot: 'bg-red-500',     bg: 'bg-red-50 dark:bg-red-950/40',          text: 'text-red-700 dark:text-red-400',         icon: XCircle },
+    'On Backorder':{ dot: 'bg-blue-500',    bg: 'bg-blue-50 dark:bg-blue-950/40',        text: 'text-blue-700 dark:text-blue-400',       icon: Package },
+  }
+
   const getStockStatusIcon = (status: string) => {
-    switch (status) {
-      case 'In Stock':
-        return <CheckCircle className="h-4 w-4 text-green-600" />
-      case 'LOW STOCK':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />
-      case 'OUT OF STOCK':
-        return <XCircle className="h-4 w-4 text-red-600" />
-      default:
-        return null
-    }
+    const cfg = STOCK_CFG[status]
+    if (!cfg) return null
+    const Icon = cfg.icon
+    return <Icon className={`h-3.5 w-3.5 ${cfg.text}`} />
   }
 
   const getStockStatusColor = (status: string) => {
-    switch (status) {
-      case 'In Stock':
-        return 'bg-green-100 text-green-800'
-      case 'LOW STOCK':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'OUT OF STOCK':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
+    const cfg = STOCK_CFG[status]
+    return cfg ? `${cfg.bg} ${cfg.text}` : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
   }
 
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto lg:ml-0">
+      <div className="flex-1 flex flex-col">
+        <Header />
+        <main className="flex-1 overflow-y-auto">
         <div className="container mx-auto p-3 sm:p-4 lg:p-6 xl:p-8">
-          <div className="mb-6 sm:mb-8 flex items-center justify-between">
+          <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2 sm:pt-0">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Products</h1>
-              <p className="text-sm sm:text-base text-muted-foreground mt-2">
-                Product inventory and sales (all-time). Values are saved when you leave each field (tab or click away).
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Products</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {productsData.total > 0 ? `${productsData.total} products` : 'Synced from WooCommerce'} · stock levels and prices update automatically
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <SyncProductsButton />
               <AddProductDialog />
             </div>
-            {hasError && (
-              <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  ⚠️ Error loading products: {errorMessage}
-                </p>
-              </div>
-            )}
           </div>
+
+          {hasError && (
+            <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                ⚠️ Error loading products: {errorMessage}
+              </p>
+            </div>
+          )}
 
           {/* Stock Summary Cards */}
           <div className="grid gap-4 md:grid-cols-4 mb-6">
@@ -269,23 +266,22 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                           {product.sku_code || '-'}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            {(() => {
-                              const displayStatus = product.stock_status_override ?? product.stock_status
-                              return (
-                                <>
-                                  {getStockStatusIcon(displayStatus)}
-                                  <span className={`px-2 py-1 rounded text-xs ${getStockStatusColor(displayStatus)}`}>
-                                    {displayStatus || '—'}
-                                  </span>
-                                  <StockStatusToggle
-                                    productId={product.product_id}
-                                    currentStatus={displayStatus || 'OUT OF STOCK'}
-                                  />
-                                </>
-                              )
-                            })()}
-                          </div>
+                          {(() => {
+                            const displayStatus = product.stock_status_override ?? product.stock_status
+                            const cfg = STOCK_CFG[displayStatus]
+                            return (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(displayStatus)}`}>
+                                  {cfg && <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />}
+                                  {displayStatus || '—'}
+                                </span>
+                                <StockStatusToggle
+                                  productId={product.product_id}
+                                  currentStatus={displayStatus || 'OUT OF STOCK'}
+                                />
+                              </div>
+                            )
+                          })()}
                         </TableCell>
                         <TableCell className="text-right">
                           <ProductStockQtyInputs
@@ -430,7 +426,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             </CardContent>
           </Card>
         </div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }
