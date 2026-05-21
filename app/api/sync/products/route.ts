@@ -149,8 +149,17 @@ export async function POST(request: NextRequest) {
               if (!existingRow?.stock_status_override) updateFields.stock_status = varStockStatus
               if (varStockQty !== null) updateFields.current_stock = varStockQty
               const { error: upErr } = await supabase.from('products').update(updateFields).eq('product_id', existingRow.product_id)
-              if (!upErr) variations++
-              else { const m = `Update ${varName}: ${upErr.message}`; errorLog.push(m); errors++ }
+              if (!upErr) {
+                variations++
+              } else if (upErr.message.includes('sku_code')) {
+                // SKU taken by another row — retry without touching sku_code
+                const { sku_code: _sk, ...noSkuFields } = updateFields as any
+                const { error: upErr2 } = await supabase.from('products').update(noSkuFields).eq('product_id', existingRow.product_id)
+                if (!upErr2) variations++
+                else { const m = `Update ${varName} (no-sku): ${upErr2.message}`; errorLog.push(m); errors++ }
+              } else {
+                const m = `Update ${varName}: ${upErr.message}`; errorLog.push(m); errors++
+              }
             } else {
               // INSERT new row — try with SKU, fall back to null SKU if conflict
               const insertFields: Record<string, unknown> = {
