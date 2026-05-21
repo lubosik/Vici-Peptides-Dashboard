@@ -226,25 +226,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                                   {product.qty_sold ?? 0}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  <EditableRetailPrice
-                                    key={`retail-${product.product_id}`}
-                                    productId={product.product_id}
-                                    value={product.retail_price != null ? product.retail_price : null}
-                                  />
+                                  <EditableRetailPrice value={product.retail_price} />
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  <EditableSalePrice
-                                    key={`sale-${product.product_id}`}
-                                    productId={product.product_id}
-                                    value={product.sale_price != null && product.sale_price > 0 ? product.sale_price : null}
-                                  />
+                                  <EditableSalePrice value={product.sale_price != null && product.sale_price > 0 ? product.sale_price : null} />
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  <EditableCost
-                                    key={`cost-${product.product_id}`}
-                                    productId={product.product_id}
-                                    value={product.our_cost != null ? product.our_cost : null}
-                                  />
+                                  <EditableCost value={product.our_cost} />
                                 </TableCell>
                                 <TableCell className="text-right text-sm">
                                   {product.margin_percent != null
