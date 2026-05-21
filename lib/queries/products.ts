@@ -57,14 +57,9 @@ export async function getProducts(
   let query = supabase
     .from('products')
     .select('*', { count: 'exact' })
-
-  // Exclude placeholder products (Product + number pattern and specific IDs)
-  // We'll filter these out after fetching, as Supabase NOT with ilike can be tricky
-  // First, exclude specific placeholder product IDs
-  const placeholderIds = [203, 209, 212, 220, 221, 222]
-  if (placeholderIds.length > 0) {
-    query = query.not('product_id', 'in', `(${placeholderIds.join(',')})`)
-  }
+    // Only show real WooCommerce products: exclude old CSV imports and sync-created placeholders
+    .not('woo_product_id', 'is', null)
+    .not('product_name', 'ilike', 'Product %')
 
   // Apply filters
   if (filters.search) {
@@ -201,7 +196,7 @@ export async function getProducts(
     return {
       ...product,
       qty_sold,
-      current_stock: Number(product.current_stock) || 0,
+      current_stock: Math.max(0, Number(product.current_stock) || 0),
       our_cost: product.our_cost != null ? Number(product.our_cost) : null,
       retail_price: retail_price > 0 ? retail_price : null,
       sale_price,
@@ -215,17 +210,13 @@ export async function getProducts(
     }
   })
 
-  // Adjust total count to exclude filtered placeholder products
-  const adjustedTotal = productsWithSales.length < (products || []).length
-    ? (count || 0) - ((products || []).length - productsWithSales.length)
-    : (count || 0)
-
+  const total = count || 0
   return {
     products: productsWithSales,
-    total: Math.max(0, adjustedTotal),
+    total,
     page,
     pageSize,
-    totalPages: Math.ceil(Math.max(0, adjustedTotal) / pageSize),
+    totalPages: Math.ceil(total / pageSize),
   }
 }
 
@@ -340,6 +331,8 @@ export async function getStockSummary(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from('products')
     .select('stock_status, stock_status_override, current_stock')
+    .not('woo_product_id', 'is', null)
+    .not('product_name', 'ilike', 'Product %')
 
   if (error) throw error
 
