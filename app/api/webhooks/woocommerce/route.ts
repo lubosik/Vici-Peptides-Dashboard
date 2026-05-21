@@ -301,9 +301,10 @@ export async function POST(request: NextRequest) {
 
     let body: Record<string, unknown>
     try {
-      body = JSON.parse(rawBody) as Record<string, unknown>
+      body = rawBody ? JSON.parse(rawBody) as Record<string, unknown> : {}
     } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+      // WooCommerce test pings may send non-JSON — acknowledge and ignore
+      return NextResponse.json({ status: 'ok' }, { status: 200 })
     }
 
     // product.created / product.updated
