@@ -115,14 +115,21 @@ export async function POST(request: NextRequest) {
             const varQtySold = Math.max(0, parseInt(variation.total_sales || '0', 10) || 0)
             const varSku = variation.sku || null
 
-            // Explicit lookup: find by woo_product_id first, then by product_id
-            let existingRow: { product_id: number; our_cost: number | null; stock_status_override: string | null } | null = null
+            // Lookup: woo_product_id → product_id → sku_code (in that priority)
+            type ExistingRow = { product_id: number; our_cost: number | null; stock_status_override: string | null }
+            let existingRow: ExistingRow | null = null
             const { data: byWooId } = await supabase.from('products').select('product_id, our_cost, stock_status_override').eq('woo_product_id', variation.id).maybeSingle()
             if (byWooId) {
               existingRow = byWooId
             } else {
               const { data: byPk } = await supabase.from('products').select('product_id, our_cost, stock_status_override').eq('product_id', variation.id).maybeSingle()
-              if (byPk) existingRow = byPk
+              if (byPk) {
+                existingRow = byPk
+              } else if (varSku) {
+                // SKU already exists in DB from CSV import — update that row
+                const { data: bySku } = await supabase.from('products').select('product_id, our_cost, stock_status_override').eq('sku_code', varSku).maybeSingle()
+                if (bySku) existingRow = bySku
+              }
             }
 
             const varOurCost = varCost ?? existingRow?.our_cost ?? ourCost ?? null
@@ -138,15 +145,23 @@ export async function POST(request: NextRequest) {
             if (varStockQty !== null) updateFields.current_stock = varStockQty
 
             if (existingRow) {
-              // UPDATE existing row — use its known product_id as the key
+              // UPDATE existing row by its known product_id
               const { error: upErr } = await supabase.from('products').update(updateFields).eq('product_id', existingRow.product_id)
               if (!upErr) variations++
               else { const m = `Update ${varName}: ${upErr.message}`; errorLog.push(m); errors++ }
             } else {
-              // INSERT new row — variation.id as product_id (safe since it doesn't exist)
+              // INSERT new row; if sku_code still conflicts, retry without it
               const { error: insErr } = await supabase.from('products').insert({ product_id: variation.id, ...updateFields })
-              if (!insErr) variations++
-              else { const m = `Insert ${varName}: ${insErr.message}`; errorLog.push(m); errors++ }
+              if (!insErr) {
+                variations++
+              } else if (insErr.message.includes('sku_code')) {
+                const { sku_code: _s, ...noSku } = updateFields as any
+                const { error: insErr2 } = await supabase.from('products').insert({ product_id: variation.id, ...noSku, sku_code: null })
+                if (!insErr2) variations++
+                else { const m = `Insert ${varName} (no-sku): ${insErr2.message}`; errorLog.push(m); errors++ }
+              } else {
+                const m = `Insert ${varName}: ${insErr.message}`; errorLog.push(m); errors++
+              }
             }
           }
         } catch (e) {
