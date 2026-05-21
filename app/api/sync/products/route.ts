@@ -126,8 +126,8 @@ export async function POST(request: NextRequest) {
               if (byPk) {
                 existingRow = byPk
               } else if (varSku) {
-                // SKU already exists in DB from CSV import — update that row
-                const { data: bySku } = await supabase.from('products').select('product_id, our_cost, stock_status_override').eq('sku_code', varSku).maybeSingle()
+                // SKU already exists in DB from CSV import — use case-insensitive match
+                const { data: bySku } = await supabase.from('products').select('product_id, our_cost, stock_status_override').ilike('sku_code', varSku).maybeSingle()
                 if (bySku) existingRow = bySku
               }
             }
