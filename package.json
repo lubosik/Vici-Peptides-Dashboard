@@ -19,7 +19,8 @@
     "backfill-retail": "tsx scripts/backfill-retail-price-from-orders.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "register:shipstation-webhook": "tsx scripts/register-shipstation-webhook.ts"
   },
   "keywords": [],
   "author": "",

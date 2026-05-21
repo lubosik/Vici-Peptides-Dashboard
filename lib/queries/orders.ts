@@ -51,6 +51,8 @@ export async function getOrders(
       order_profit,
       shipping_charged,
       shipping_cost,
+      tracking_number,
+      shipped_at,
       shippo_transaction_object_id,
       coupon_code,
       coupon_discount,
