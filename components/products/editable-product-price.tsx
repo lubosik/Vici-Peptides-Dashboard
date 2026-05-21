@@ -70,6 +70,65 @@ export function EditableRetailPrice({ productId, value, className = '' }: Editab
   )
 }
 
+interface EditableCostProps {
+  productId: number
+  value: number | null
+  className?: string
+}
+
+export function EditableCost({ productId, value, className = '' }: EditableCostProps) {
+  const router = useRouter()
+  const [input, setInput] = useState(value != null ? String(value) : '')
+  const [loading, setLoading] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    setInput(value != null ? String(value) : '')
+  }, [productId, value])
+
+  const save = async (raw: string) => {
+    const parsed = parsePriceInput(raw)
+    if (parsed === null && value === null) return
+    if (parsed !== null && value !== null && Math.abs(parsed - value) < 0.01) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/products/${productId}/stock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ our_cost: parsed ?? 0 }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to update')
+      }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+      router.refresh()
+    } catch (e) {
+      console.error(e)
+      alert(e instanceof Error ? e.message : 'Failed to update')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Input
+        type="text"
+        inputMode="decimal"
+        className={`h-8 w-20 text-right ${className}`}
+        placeholder="0"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onBlur={() => save(input)}
+        disabled={loading}
+      />
+      {saved && <span className="flex items-center gap-0.5 text-[10px] text-green-600" title="Saved"><Check className="h-3 w-3" /> Saved</span>}
+    </div>
+  )
+}
+
 interface EditableSalePriceProps {
   productId: number
   value: number | null

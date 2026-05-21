@@ -69,11 +69,14 @@ export async function PATCH(
       : body.sale_price === null || body.sale_price === undefined
         ? null
         : (parsePrice(body.sale_price) ?? 0)
-    if (!stockStatus && startingQty === null && qtySold === null && retailPrice === null && !hasSalePrice) {
+    const ourCost = 'our_cost' in body ? parsePrice(body.our_cost) : null
+    const hasOurCost = 'our_cost' in body
+
+    if (!stockStatus && startingQty === null && qtySold === null && retailPrice === null && !hasSalePrice && !hasOurCost) {
       return NextResponse.json(
         {
           error:
-            'Provide at least one of: stockStatus, starting_qty, qty_sold, retail_price, sale_price',
+            'Provide at least one of: stockStatus, starting_qty, qty_sold, retail_price, sale_price, our_cost',
         },
         { status: 400 }
       )
@@ -109,6 +112,7 @@ export async function PATCH(
     if (stockStatus) updates.stock_status_override = stockStatus
     if (retailPrice !== null) updates.retail_price = retailPrice
     if (hasSalePrice) updates.sale_price = salePrice === null ? null : salePrice
+    if (hasOurCost && ourCost !== null) updates.our_cost = ourCost
 
     const startQty = startingQty !== null ? startingQty : (Number(existing.starting_qty) ?? 0)
     const soldQty = qtySold !== null ? qtySold : (Number(existing.qty_sold) ?? 0)
