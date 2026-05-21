@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
     let synced = 0
     let variations = 0
     let errors = 0
+    const errorLog: string[] = []
 
     for (const product of allProducts) {
       // Skip variable parent products — stock lives on variations, not the parent
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
         if (error) {
           // Fallback: try upsert on product_id in case woo_product_id not yet set
           const { error: e2 } = await supabase.from('products').upsert({ ...upsertRow }, { onConflict: 'product_id' })
-          if (e2) { console.error(`Product sync error for ${product.name}:`, e2.message); errors++; continue }
+          if (e2) { const m = `Product ${product.name}: ${e2.message}`; errorLog.push(m); console.error(m); errors++; continue }
         }
         synced++
       }
@@ -140,17 +141,17 @@ export async function POST(request: NextRequest) {
               // UPDATE existing row — use its known product_id as the key
               const { error: upErr } = await supabase.from('products').update(updateFields).eq('product_id', existingRow.product_id)
               if (!upErr) variations++
-              else { errors++; console.error(`Variation update error for ${varName} (product_id=${existingRow.product_id}):`, upErr.message) }
+              else { const m = `Update ${varName}: ${upErr.message}`; errorLog.push(m); errors++ }
             } else {
               // INSERT new row — variation.id as product_id (safe since it doesn't exist)
               const { error: insErr } = await supabase.from('products').insert({ product_id: variation.id, ...updateFields })
               if (!insErr) variations++
-              else { errors++; console.error(`Variation insert error for ${varName}:`, insErr.message) }
+              else { const m = `Insert ${varName}: ${insErr.message}`; errorLog.push(m); errors++ }
             }
           }
         } catch (e) {
           errors++
-          console.warn(`Could not sync variations for product ${product.id}:`, e)
+          const m = `Variations for ${product.name}: ${e instanceof Error ? e.message : String(e)}`; errorLog.push(m)
         }
       }
     }
@@ -166,6 +167,7 @@ export async function POST(request: NextRequest) {
       errors,
       total: allProducts.length,
       message: `Synced ${synced} products and ${variations} variations`,
+      error_sample: errorLog.slice(0, 5),
     })
   } catch (error) {
     console.error('Product sync failed:', error)
