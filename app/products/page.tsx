@@ -15,6 +15,7 @@ import { StockStatusToggle } from '@/components/products/stock-status-toggle'
 import { EditableRetailPrice, EditableSalePrice, EditableCost } from '@/components/products/editable-product-price'
 import { SyncProductsButton } from '@/components/products/sync-products-button'
 import { RecalculateCostsButton } from '@/components/products/recalculate-costs-button'
+import { CleanupProductsButton } from '@/components/products/cleanup-products-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,6 +90,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               <div className="flex flex-wrap items-center gap-2">
                 <SyncProductsButton />
                 <RecalculateCostsButton />
+                <CleanupProductsButton />
               </div>
             </div>
 
