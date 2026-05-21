@@ -75,17 +75,8 @@ function norm(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9+]/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function resolveAlias(raw: string): string {
-  const n = norm(raw)
-  for (const [alias, canonical] of Object.entries(ALIASES)) {
-    if (n.includes(alias)) return canonical
-  }
-  return raw
-}
-
 function findBestMatch(productName: string): typeof COST_DATA[0] | null {
-  const resolved = resolveAlias(productName)
-  const pNorm = norm(resolved)
+  const pNorm = norm(productName)
 
   let best: typeof COST_DATA[0] | null = null
   let bestScore = 0
@@ -94,10 +85,16 @@ function findBestMatch(productName: string): typeof COST_DATA[0] | null {
     const nameNorm = norm(entry.name)
     const strengthNorm = norm(entry.strength)
 
-    if (!pNorm.includes(nameNorm)) continue
+    // Direct name match OR alias match (e.g. "glp1 sema" → "Semaglutide")
+    const directMatch = pNorm.includes(nameNorm)
+    const aliasMatch = !directMatch && Object.entries(ALIASES).some(
+      ([alias, canonical]) => norm(canonical) === nameNorm && pNorm.includes(alias)
+    )
+    if (!directMatch && !aliasMatch) continue
+
+    // Strength must appear in the original product name
     if (!pNorm.includes(strengthNorm)) continue
 
-    // Prefer longer (more specific) name match
     const score = nameNorm.length + strengthNorm.length
     if (score > bestScore) {
       bestScore = score
